@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import requests
 
@@ -5,7 +6,7 @@ st.set_page_config(page_title="IT Service Desk", page_icon="🔧", layout="cente
 st.title("Portal de Servicios TI")
 st.subheader("Generación de Tickets - Formulario Web")
 
-API_URL = "http://127.0.0.1:8000/api/v1/tickets/"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api/v1/tickets/")
 
 with st.form("ticket_form"):
     st.write("Complete los parámetros del ticket (Estándar ManageEngine)")
