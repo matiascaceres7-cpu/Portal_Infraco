@@ -1,7 +1,7 @@
 # Main entry point for FastAPI application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import tickets
+from app.api import tickets, users
 
 app = FastAPI(
     title="IT Service Desk API",
@@ -19,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(tickets.router)
+app.include_router(users.router)
 
 @app.get("/", tags=["Health Check"])
 async def root():
