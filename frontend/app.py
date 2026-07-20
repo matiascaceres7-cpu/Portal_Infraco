@@ -5,8 +5,14 @@ import requests
 st.set_page_config(page_title="IT Service Desk", page_icon="🔧", layout="wide")
 st.title("Portal de Servicios TI")
 
-# Logotipo Corporativo
-st.image("frontend/logo.png", width=250)
+# Construir ruta absoluta al logo basada en la ubicación de este script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+logo_path = os.path.join(current_dir, "logo.png")
+
+try:
+    st.image(logo_path, width=250)
+except Exception:
+    st.warning("⚠️ No se encontró el archivo logo.png en el directorio del frontend.")
 
 st.subheader("Sistema Integral de Gestión de Tickets y Usuarios")
 
