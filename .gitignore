@@ -1,1 +1,10 @@
+# Portal_Infraco/.gitignore
+# Entornos virtuales
+venv/
+env/
+__pycache__/
+*.pyc
 
+# Credenciales y variables de entorno
+backend/credentials.json
+.env
