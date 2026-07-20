@@ -31,3 +31,30 @@ async def create_ticket(ticket_in: TicketCreate):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Fallo en la creación del ticket: {str(e)}"
         )
+
+@router.get("/", response_model=list[TicketDB], status_code=status.HTTP_200_OK)
+async def list_tickets():
+    """
+    Recupera el historial completo de tickets desde Firestore.
+    Ideal para auditoría, exportación de datos y respaldos.
+    """
+    try:
+        db = get_db()
+        tickets_ref = db.collection("tickets")
+        
+        # Recuperar todos los documentos de la colección
+        docs = tickets_ref.stream()
+        
+        tickets_list = []
+        for doc in docs:
+            ticket_data = doc.to_dict()
+            ticket_data["id"] = doc.id
+            tickets_list.append(ticket_data)
+            
+        return tickets_list
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al recuperar el historial de tickets: {str(e)}"
+        )
