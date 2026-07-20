@@ -1,1 +1,4 @@
-# FastAPI dependencies will be added here
+fastapi
+uvicorn
+pydantic
+firebase-admin
