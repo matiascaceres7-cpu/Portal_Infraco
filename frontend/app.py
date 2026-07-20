@@ -4,6 +4,10 @@ import requests
 
 st.set_page_config(page_title="IT Service Desk", page_icon="🔧", layout="wide")
 st.title("Portal de Servicios TI")
+
+# Logotipo Corporativo
+st.image("frontend/logo.png", width=250)
+
 st.subheader("Sistema Integral de Gestión de Tickets y Usuarios")
 
 # Configuración de URLs
@@ -26,9 +30,13 @@ with tab1:
     st.write("Complete los parámetros del ticket (Estándar ManageEngine)")
     
     with st.form("ticket_form"):
+        # Clasificación del Ticket con radio horizontal
+        clasificacion = st.radio("Clasificación del Ticket", ["Incidente", "Requerimiento"], horizontal=True, key="clasificacion_ticket")
+        
+        st.markdown("---")
+        
         col1, col2 = st.columns(2)
         with col1:
-            tipo = st.selectbox("Tipo de Ticket", ["Incidente", "Requerimiento"], key="tipo_ticket")
             empresa = st.text_input("Empresa", value="Onnetfibra", key="empresa_ticket")
             ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_ticket")
             categoria = st.text_input("Categoría", value="Network", key="categoria_ticket")
@@ -52,7 +60,7 @@ with tab1:
             urgencia = URGENCY_MAP[urgencia_es]
             
             payload = {
-                "type": tipo,
+                "type": clasificacion,
                 "account": empresa,
                 "site": ubicacion,
                 "category": categoria,
