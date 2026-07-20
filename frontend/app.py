@@ -11,6 +11,10 @@ API_BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api/v1")
 TICKETS_URL = f"{API_BASE_URL}/tickets/"
 USERS_URL = f"{API_BASE_URL}/users/"
 
+# Mapeo de prioridad y urgencia (español -> inglés)
+PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
+URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
+
 # Crear las tres pestañas
 tab1, tab2, tab3 = st.tabs(["Generar Ticket", "Historial de Tickets", "Gestión de Usuarios"])
 
@@ -25,36 +29,40 @@ with tab1:
         col1, col2 = st.columns(2)
         with col1:
             tipo = st.selectbox("Tipo de Ticket", ["Incidente", "Requerimiento"], key="tipo_ticket")
-            account = st.text_input("Account", value="Buk", key="account_ticket")
-            site = st.text_input("Site", value="Pisos 14, 15 y 16", key="site_ticket")
-            category = st.text_input("Category", value="Network", key="category_ticket")
-            subcategory = st.text_input("Subcategory", value="WiFi", key="subcategory_ticket")
+            empresa = st.text_input("Empresa", value="Onnetfibra", key="empresa_ticket")
+            ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_ticket")
+            categoria = st.text_input("Categoría", value="Network", key="categoria_ticket")
+            subcategoria = st.text_input("Subcategoría", value="WiFi", key="subcategoria_ticket")
         
         with col2:
-            level = st.selectbox("Level", ["Tier 1", "Tier 2", "Tier 3"], key="level_ticket")
-            priority = st.selectbox("Priority", ["Low", "Medium", "High"], key="priority_ticket")
-            urgency = st.selectbox("Urgency", ["Low", "Medium", "High"], key="urgency_ticket")
-            item = st.text_input("Item", value="Cortes de señal y zonas de sombra", key="item_ticket")
+            nivel = st.selectbox("Nivel", ["Tier 1", "Tier 2", "Tier 3"], index=0, key="nivel_ticket")
+            prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_ticket")
+            urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_ticket")
+            elemento = st.text_input("Elemento Afectado", value="Cortes de señal y zonas de sombra", key="elemento_ticket")
         
         st.markdown("---")
-        subject = st.text_input("Asunto (Subject)", value="Diagnóstico y optimización de red WiFi", key="subject_ticket")
-        description = st.text_area("Descripción detallada", placeholder="Ingrese los detalles del requerimiento o incidente...", key="description_ticket")
+        asunto = st.text_input("Asunto", value="Diagnóstico y optimización de red WiFi", key="asunto_ticket")
+        descripcion = st.text_area("Descripción Detallada", placeholder="Ingrese los detalles del requerimiento o incidente...", key="descripcion_ticket")
         
         submitted = st.form_submit_button("✅ Crear Ticket")
         
         if submitted:
+            # Mapeo de prioridad y urgencia a inglés
+            prioridad = PRIORITY_MAP[prioridad_es]
+            urgencia = URGENCY_MAP[urgencia_es]
+            
             payload = {
                 "type": tipo,
-                "account": account,
-                "site": site,
-                "category": category,
-                "subcategory": subcategory,
-                "item": item,
-                "level": level,
-                "priority": priority,
-                "urgency": urgency,
-                "subject": subject,
-                "description": description
+                "account": empresa,
+                "site": ubicacion,
+                "category": categoria,
+                "subcategory": subcategoria,
+                "item": elemento,
+                "level": nivel,
+                "priority": prioridad,
+                "urgency": urgencia,
+                "subject": asunto,
+                "description": descripcion
             }
             
             try:
