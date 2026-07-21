@@ -7,7 +7,7 @@ st.title("Portal de Servicios TI")
 
 # Construir ruta absoluta al logo basada en la ubicación de este script
 current_dir = os.path.dirname(os.path.abspath(__file__))
-logo_path = os.path.join(current_dir, "logo.png")
+logo_path = os.path.join(current_dir, "Logo.png")
 
 try:
     st.image(logo_path, width=250)
