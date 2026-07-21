@@ -171,7 +171,7 @@ with tab3:
     # Sección: Listar usuarios registrados
     st.subheader("📋 Usuarios Registrados")
     
-    if st.button("Actualizar Historial"):
+if st.button("Actualizar Historial"):
     try:
         response_get = requests.get(f"{API_BASE_URL}/tickets/")
         if response_get.status_code == 200:
