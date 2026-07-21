@@ -3,6 +3,15 @@ import streamlit as st
 import requests
 
 st.set_page_config(page_title="IT Service Desk", page_icon="🔧", layout="wide")
+# --- CSS Personalizado para ocultar marca de Streamlit ---
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 st.title("Portal de Servicios TI")
 
 # Construir ruta absoluta al logo basada en la ubicación de este script
