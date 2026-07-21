@@ -60,6 +60,7 @@ db = get_firestore_client()
 def enviar_correo_tecnico(ticket_data, ticket_id):
     """
     Envía un correo electrónico transaccional al equipo técnico con los detalles del ticket.
+    Formato ServiceDesk con etiquetas @@ para parseo automático.
     
     Args:
         ticket_data (dict): Diccionario con los datos del ticket
@@ -79,67 +80,33 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
         # Construir asunto
         asunto = f"NUEVO TICKET [Urgencia: {ticket_data['urgency']}] - {ticket_data['subject']}"
         
-        # Construir cuerpo HTML del correo
-        cuerpo_html = f"""
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; }}
-                .header {{ background-color: #2c3e50; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
-                .header h2 {{ margin: 0; }}
-                .ticket-info {{ background-color: white; padding: 15px; border-left: 4px solid #3498db; margin-bottom: 15px; }}
-                .ticket-info p {{ margin: 8px 0; }}
-                .label {{ font-weight: bold; color: #2c3e50; }}
-                .value {{ color: #555; margin-left: 10px; }}
-                .urgency-high {{ color: #e74c3c; font-weight: bold; }}
-                .urgency-medium {{ color: #f39c12; font-weight: bold; }}
-                .urgency-low {{ color: #27ae60; font-weight: bold; }}
-                .footer {{ margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #777; text-align: center; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h2>🔧 Nuevo Ticket Registrado</h2>
-                </div>
-                
-                <div class="ticket-info">
-                    <p><span class="label">ID del Ticket:</span> <span class="value">{ticket_id}</span></p>
-                    <p><span class="label">Asunto:</span> <span class="value">{ticket_data['subject']}</span></p>
-                    <p><span class="label">Tipo:</span> <span class="value">{ticket_data['type']}</span></p>
-                </div>
-                
-                <div class="ticket-info">
-                    <p><span class="label">Empresa:</span> <span class="value">{ticket_data['account']}</span></p>
-                    <p><span class="label">Ubicación:</span> <span class="value">{ticket_data['site']}</span></p>
-                    <p><span class="label">Categoría:</span> <span class="value">{ticket_data['category']}</span></p>
-                    <p><span class="label">Subcategoría:</span> <span class="value">{ticket_data['subcategory']}</span></p>
-                </div>
-                
-                <div class="ticket-info">
-                    <p><span class="label">Elemento Afectado:</span> <span class="value">{ticket_data['item']}</span></p>
-                    <p><span class="label">Nivel:</span> <span class="value">{ticket_data['level']}</span></p>
-                    <p><span class="label">Prioridad:</span> <span class="value">{ticket_data['priority']}</span></p>
-                    <p><span class="label">Urgencia:</span> <span class="urgency-{ticket_data['urgency'].lower()}">{ticket_data['urgency']}</span></p>
-                </div>
-                
-                <div class="ticket-info">
-                    <p><span class="label">Descripción:</span></p>
-                    <p style="margin-left: 10px; background-color: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap;">{ticket_data['description']}</p>
-                </div>
-                
-                <div class="footer">
-                    <p>Este es un correo automático generado por el Portal de Servicios TI.</p>
-                    <p>Por favor, no responda directamente a este correo.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        # Construir cuerpo en texto plano con formato ServiceDesk (@@campo: valor@@)
+        cuerpo_texto = f"""NUEVO TICKET CREADO EN EL PORTAL DE SERVICIOS TI
+{'='*60}
+
+@@ID_TICKET: {ticket_id}@@
+@@Empresa: {ticket_data['account']}@@
+@@Ubicacion: {ticket_data['site']}@@
+@@Nivel: {ticket_data['level']}@@
+@@Tipo: {ticket_data['type']}@@
+@@Categoria: {ticket_data['category']}@@
+@@Subcategoria: {ticket_data['subcategory']}@@
+@@Elemento_Afectado: {ticket_data['item']}@@
+@@Prioridad: {ticket_data['priority']}@@
+@@Urgencia: {ticket_data['urgency']}@@
+@@Asunto: {ticket_data['subject']}@@
+
+DESCRIPCIÓN DEL INCIDENTE:
+{'='*60}
+{ticket_data['description']}
+
+{'='*60}
+Este es un correo automático generado por el Portal de Servicios TI.
+Por favor, no responda directamente a este correo.
+"""
         
-        # Crear mensaje MIME
-        mensaje = MIMEText(cuerpo_html, 'html', 'utf-8')
+        # Crear mensaje MIME en texto plano
+        mensaje = MIMEText(cuerpo_texto, 'plain', 'utf-8')
         mensaje['Subject'] = asunto
         mensaje['From'] = sender_email
         mensaje['To'] = recipient_email
@@ -168,76 +135,163 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
 PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 
-# Crear las tres pestañas
+# Categorías estándar de infraestructura
+CATEGORIAS = ["Network", "Hardware", "Software", "Accesos", "Telefonía", "Servidores"]
+
+# Crear las tres pestañas principales
 tab1, tab2, tab3 = st.tabs(["Generar Ticket", "Historial de Tickets", "Gestión de Usuarios"])
 
 # ============================================
-# PESTAÑA 1: GENERAR TICKET
+# PESTAÑA 1: GENERAR TICKET (MODULAR CON TABS)
 # ============================================
 with tab1:
     st.header("📝 Generación de Tickets")
     st.write("Complete los parámetros del ticket (Estándar ManageEngine)")
     
-    with st.form("ticket_form"):
-        # Clasificación del Ticket con radio horizontal
-        clasificacion = st.radio("Clasificación del Ticket", ["Incidente", "Requerimiento"], horizontal=True, key="clasificacion_ticket")
+    # Crear tabs para Incidente y Requerimiento
+    tab_incidente, tab_requerimiento = st.tabs(["Incidente", "Requerimiento"])
+    
+    # ============================================
+    # SUB-TAB: INCIDENTE
+    # ============================================
+    with tab_incidente:
+        # Banner de Incidente (placeholder)
+        st.image("https://via.placeholder.com/800x150?text=Banner+Incidente", use_column_width=True)
         
-        st.markdown("---")
+        st.subheader("📌 Formulario de Incidente")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            empresa = st.text_input("Empresa", value="Onnetfibra", key="empresa_ticket")
-            ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_ticket")
-            categoria = st.text_input("Categoría", value="Network", key="categoria_ticket")
-            subcategoria = st.text_input("Subcategoría", value="WiFi", key="subcategoria_ticket")
-        
-        with col2:
-            nivel = st.selectbox("Nivel", ["Tier 1", "Tier 2", "Tier 3"], index=0, key="nivel_ticket")
-            prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_ticket")
-            urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_ticket")
-            elemento = st.text_input("Elemento Afectado", value="Cortes de señal y zonas de sombra", key="elemento_ticket")
-        
-        st.markdown("---")
-        asunto = st.text_input("Asunto", value="Diagnóstico y optimización de red WiFi", key="asunto_ticket")
-        descripcion = st.text_area("Descripción Detallada", placeholder="Ingrese los detalles del requerimiento o incidente...", key="descripcion_ticket")
-        
-        submitted = st.form_submit_button("✅ Crear Ticket")
-        
-        if submitted:
-            # Mapeo de prioridad y urgencia a inglés
-            prioridad = PRIORITY_MAP[prioridad_es]
-            urgencia = URGENCY_MAP[urgencia_es]
+        with st.form("ticket_form_incidente"):
+            st.markdown("---")
             
-            ticket_data = {
-                "type": clasificacion,
-                "account": empresa,
-                "site": ubicacion,
-                "category": categoria,
-                "subcategory": subcategoria,
-                "item": elemento,
-                "level": nivel,
-                "priority": prioridad,
-                "urgency": urgencia,
-                "subject": asunto,
-                "description": descripcion
-            }
+            col1, col2 = st.columns(2)
+            with col1:
+                empresa = st.text_input("Empresa", value="On NetFibra", disabled=True, key="empresa_incidente")
+                ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_incidente")
+                categoria = st.selectbox("Categoría", CATEGORIAS, key="categoria_incidente")
+                subcategoria = st.text_input("Subcategoría", value="", key="subcategoria_incidente")
             
-            try:
-                # Agregar el documento a la colección 'tickets' en Firestore
-                doc_ref = db.collection('tickets').add(ticket_data)
-                ticket_id = doc_ref[1].id
-                
-                st.success(f"✅ Ticket creado exitosamente con ID: {ticket_id}")
-                
-                # Enviar correo técnico de notificación
-                email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
-                
-                if email_enviado:
-                    st.info("📧 Notificación enviada al equipo técnico.")
-                
-                st.balloons()
-            except Exception as e:
-                st.error(f"❌ Error al crear el ticket: {str(e)}")
+            with col2:
+                nivel = st.selectbox("Nivel", ["Nivel 1", "Nivel 2"], key="nivel_incidente")
+                prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_incidente")
+                urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_incidente")
+                elemento = st.text_input("Elemento Afectado", value="", key="elemento_incidente")
+            
+            st.markdown("---")
+            asunto = st.text_input("Asunto", value="", key="asunto_incidente")
+            descripcion = st.text_area("Descripción Detallada", placeholder="Ingrese los detalles del incidente...", key="descripcion_incidente")
+            
+            submitted = st.form_submit_button("✅ Crear Incidente")
+            
+            if submitted:
+                # Validación de campos obligatorios
+                if not asunto or not descripcion:
+                    st.error("❌ Asunto y Descripción son campos obligatorios.")
+                else:
+                    # Mapeo de prioridad y urgencia a inglés
+                    prioridad = PRIORITY_MAP[prioridad_es]
+                    urgencia = URGENCY_MAP[urgencia_es]
+                    
+                    ticket_data = {
+                        "type": "Incidente",
+                        "account": empresa,
+                        "site": ubicacion,
+                        "category": categoria,
+                        "subcategory": subcategoria,
+                        "item": elemento,
+                        "level": nivel,
+                        "priority": prioridad,
+                        "urgency": urgencia,
+                        "subject": asunto,
+                        "description": descripcion
+                    }
+                    
+                    try:
+                        # Agregar el documento a la colección 'tickets' en Firestore
+                        doc_ref = db.collection('tickets').add(ticket_data)
+                        ticket_id = doc_ref[1].id
+                        
+                        st.success(f"✅ Incidente creado exitosamente con ID: {ticket_id}")
+                        
+                        # Enviar correo técnico de notificación
+                        email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                        
+                        if email_enviado:
+                            st.info("📧 Notificación enviada al equipo técnico.")
+                        
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Error al crear el incidente: {str(e)}")
+    
+    # ============================================
+    # SUB-TAB: REQUERIMIENTO
+    # ============================================
+    with tab_requerimiento:
+        # Banner de Requerimiento (placeholder)
+        st.image("https://via.placeholder.com/800x150?text=Banner+Requerimiento", use_column_width=True)
+        
+        st.subheader("📌 Formulario de Requerimiento")
+        
+        with st.form("ticket_form_requerimiento"):
+            st.markdown("---")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                empresa = st.text_input("Empresa", value="On NetFibra", disabled=True, key="empresa_requerimiento")
+                ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_requerimiento")
+                categoria = st.selectbox("Categoría", CATEGORIAS, key="categoria_requerimiento")
+                subcategoria = st.text_input("Subcategoría", value="", key="subcategoria_requerimiento")
+            
+            with col2:
+                nivel = st.selectbox("Nivel", ["Nivel 1", "Nivel 2"], key="nivel_requerimiento")
+                prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_requerimiento")
+                urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_requerimiento")
+                elemento = st.text_input("Elemento Afectado", value="", key="elemento_requerimiento")
+            
+            st.markdown("---")
+            asunto = st.text_input("Asunto", value="", key="asunto_requerimiento")
+            descripcion = st.text_area("Descripción Detallada", placeholder="Ingrese los detalles del requerimiento...", key="descripcion_requerimiento")
+            
+            submitted = st.form_submit_button("✅ Crear Requerimiento")
+            
+            if submitted:
+                # Validación de campos obligatorios
+                if not asunto or not descripcion:
+                    st.error("❌ Asunto y Descripción son campos obligatorios.")
+                else:
+                    # Mapeo de prioridad y urgencia a inglés
+                    prioridad = PRIORITY_MAP[prioridad_es]
+                    urgencia = URGENCY_MAP[urgencia_es]
+                    
+                    ticket_data = {
+                        "type": "Requerimiento",
+                        "account": empresa,
+                        "site": ubicacion,
+                        "category": categoria,
+                        "subcategory": subcategoria,
+                        "item": elemento,
+                        "level": nivel,
+                        "priority": prioridad,
+                        "urgency": urgencia,
+                        "subject": asunto,
+                        "description": descripcion
+                    }
+                    
+                    try:
+                        # Agregar el documento a la colección 'tickets' en Firestore
+                        doc_ref = db.collection('tickets').add(ticket_data)
+                        ticket_id = doc_ref[1].id
+                        
+                        st.success(f"✅ Requerimiento creado exitosamente con ID: {ticket_id}")
+                        
+                        # Enviar correo técnico de notificación
+                        email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                        
+                        if email_enviado:
+                            st.info("📧 Notificación enviada al equipo técnico.")
+                        
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Error al crear el requerimiento: {str(e)}")
 
 # ============================================
 # PESTAÑA 2: HISTORIAL DE TICKETS
