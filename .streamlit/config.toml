@@ -1,4 +1,7 @@
 [theme]
-base="Black"
-primaryColor="180A94"
-font="sans serif"
+base = "dark"
+primaryColor = "#6600FF"
+backgroundColor = "#0b2540"         # azul oscuro
+secondaryBackgroundColor = "#12283a" # opcional, paneles
+textColor = "#E6EEF6"
+font = "sans serif"
