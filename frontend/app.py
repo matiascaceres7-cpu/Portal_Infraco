@@ -171,17 +171,28 @@ with tab3:
     # Sección: Listar usuarios registrados
     st.subheader("📋 Usuarios Registrados")
     
-    if st.button("📲 Listar Usuarios Registrados", key="btn_users"):
-        try:
-            response_get = requests.get(USERS_URL)
-            if response_get.status_code == 200:
-                users_data = response_get.json()
-                if users_data:
-                    st.dataframe(users_data, use_container_width=True)
-                    st.info(f"📌 Total de usuarios registrados: {len(users_data)}")
-                else:
-                    st.info("La base de datos está conectada, pero aún no hay usuarios registrados.")
+    if st.button("Actualizar Historial"):
+    try:
+        response_get = requests.get(f"{API_BASE_URL}/tickets/")
+        if response_get.status_code == 200:
+            tickets_data = response_get.json()
+            if tickets_data:
+                # --- NUEVO: Panel de Métricas ---
+                total_tickets = len(tickets_data)
+                total_incidentes = sum(1 for t in tickets_data if t.get("type") == "Incidente")
+                total_req = sum(1 for t in tickets_data if t.get("type") == "Requerimiento")
+                
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total de Tickets", total_tickets)
+                col2.metric("Incidentes", total_incidentes)
+                col3.metric("Requerimientos", total_req)
+                st.markdown("---")
+                
+                # Despliegue de la tabla
+                st.dataframe(tickets_data, use_container_width=True)
             else:
-                st.error(f"Error al consultar la base de datos. Código: {response_get.status_code}")
-        except requests.exceptions.ConnectionError:
-            st.error("🚨 No se pudo conectar con el Backend para recuperar el listado de usuarios.")
+                st.info("La base de datos está conectada, pero aún no hay tickets registrados.")
+        else:
+            st.error(f"Error al consultar la base de datos. Código: {response_get.status_code}")
+    except requests.exceptions.ConnectionError:
+        st.error("🚨 No se pudo conectar con el Backend para recuperar el historial.")
