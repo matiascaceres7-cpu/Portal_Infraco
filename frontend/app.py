@@ -1,7 +1,9 @@
 import os
+import smtplib
 import streamlit as st
 from google.cloud import firestore
 from google.oauth2 import service_account
+from email.mime.text import MIMEText
 
 st.set_page_config(page_title="IT Service Desk", page_icon="🔧", layout="wide")
 # --- CSS Personalizado para ocultar marca de Streamlit ---
@@ -51,6 +53,116 @@ def get_firestore_client():
 
 # Obtener la instancia del cliente
 db = get_firestore_client()
+
+# ============================================
+# FUNCIÓN PARA ENVÍO DE CORREOS TRANSACCIONALES
+# ============================================
+def enviar_correo_tecnico(ticket_data, ticket_id):
+    """
+    Envía un correo electrónico transaccional al equipo técnico con los detalles del ticket.
+    
+    Args:
+        ticket_data (dict): Diccionario con los datos del ticket
+        ticket_id (str): ID único del documento del ticket en Firestore
+    """
+    try:
+        # Obtener configuración de correo desde st.secrets
+        email_config = st.secrets["email"]
+        
+        # Datos necesarios del correo
+        sender_email = email_config["sender"]
+        sender_password = email_config["password"]
+        recipient_email = email_config["recipient_tech"]
+        smtp_server = email_config.get("smtp_server", "smtp.gmail.com")
+        smtp_port = email_config.get("smtp_port", 465)
+        
+        # Construir asunto
+        asunto = f"NUEVO TICKET [Urgencia: {ticket_data['urgency']}] - {ticket_data['subject']}"
+        
+        # Construir cuerpo HTML del correo
+        cuerpo_html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 8px; }}
+                .header {{ background-color: #2c3e50; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
+                .header h2 {{ margin: 0; }}
+                .ticket-info {{ background-color: white; padding: 15px; border-left: 4px solid #3498db; margin-bottom: 15px; }}
+                .ticket-info p {{ margin: 8px 0; }}
+                .label {{ font-weight: bold; color: #2c3e50; }}
+                .value {{ color: #555; margin-left: 10px; }}
+                .urgency-high {{ color: #e74c3c; font-weight: bold; }}
+                .urgency-medium {{ color: #f39c12; font-weight: bold; }}
+                .urgency-low {{ color: #27ae60; font-weight: bold; }}
+                .footer {{ margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 12px; color: #777; text-align: center; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2>🔧 Nuevo Ticket Registrado</h2>
+                </div>
+                
+                <div class="ticket-info">
+                    <p><span class="label">ID del Ticket:</span> <span class="value">{ticket_id}</span></p>
+                    <p><span class="label">Asunto:</span> <span class="value">{ticket_data['subject']}</span></p>
+                    <p><span class="label">Tipo:</span> <span class="value">{ticket_data['type']}</span></p>
+                </div>
+                
+                <div class="ticket-info">
+                    <p><span class="label">Empresa:</span> <span class="value">{ticket_data['account']}</span></p>
+                    <p><span class="label">Ubicación:</span> <span class="value">{ticket_data['site']}</span></p>
+                    <p><span class="label">Categoría:</span> <span class="value">{ticket_data['category']}</span></p>
+                    <p><span class="label">Subcategoría:</span> <span class="value">{ticket_data['subcategory']}</span></p>
+                </div>
+                
+                <div class="ticket-info">
+                    <p><span class="label">Elemento Afectado:</span> <span class="value">{ticket_data['item']}</span></p>
+                    <p><span class="label">Nivel:</span> <span class="value">{ticket_data['level']}</span></p>
+                    <p><span class="label">Prioridad:</span> <span class="value">{ticket_data['priority']}</span></p>
+                    <p><span class="label">Urgencia:</span> <span class="urgency-{ticket_data['urgency'].lower()}">{ticket_data['urgency']}</span></p>
+                </div>
+                
+                <div class="ticket-info">
+                    <p><span class="label">Descripción:</span></p>
+                    <p style="margin-left: 10px; background-color: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap;">{ticket_data['description']}</p>
+                </div>
+                
+                <div class="footer">
+                    <p>Este es un correo automático generado por el Portal de Servicios TI.</p>
+                    <p>Por favor, no responda directamente a este correo.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Crear mensaje MIME
+        mensaje = MIMEText(cuerpo_html, 'html', 'utf-8')
+        mensaje['Subject'] = asunto
+        mensaje['From'] = sender_email
+        mensaje['To'] = recipient_email
+        
+        # Conectar a servidor SMTP y enviar
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(mensaje)
+        
+        return True
+    
+    except KeyError as ke:
+        st.warning(f"⚠️ Configuración de correo incompleta. Falta: {str(ke)}. El ticket fue creado pero no se envió notificación.")
+        return False
+    except smtplib.SMTPAuthenticationError:
+        st.warning("⚠️ Error de autenticación SMTP. Verifica las credenciales de correo en st.secrets. El ticket fue creado.")
+        return False
+    except smtplib.SMTPException as e:
+        st.warning(f"⚠️ Error SMTP al enviar el correo: {str(e)}. El ticket fue creado pero no se notificó.")
+        return False
+    except Exception as e:
+        st.warning(f"⚠️ Error al enviar correo transaccional: {str(e)}. El ticket fue creado correctamente.")
+        return False
 
 # Mapeo de prioridad y urgencia (español -> inglés)
 PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
@@ -113,7 +225,16 @@ with tab1:
             try:
                 # Agregar el documento a la colección 'tickets' en Firestore
                 doc_ref = db.collection('tickets').add(ticket_data)
-                st.success(f"✅ Ticket creado exitosamente con ID: {doc_ref[1].id}")
+                ticket_id = doc_ref[1].id
+                
+                st.success(f"✅ Ticket creado exitosamente con ID: {ticket_id}")
+                
+                # Enviar correo técnico de notificación
+                email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                
+                if email_enviado:
+                    st.info("📧 Notificación enviada al equipo técnico.")
+                
                 st.balloons()
             except Exception as e:
                 st.error(f"❌ Error al crear el ticket: {str(e)}")
