@@ -77,32 +77,24 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
         smtp_server = email_config.get("smtp_server", "smtp.gmail.com")
         smtp_port = email_config.get("smtp_port", 465)
         
-        # Construir asunto
-        asunto = f"NUEVO TICKET [Urgencia: {ticket_data['urgency']}] - {ticket_data['subject']}"
+        # Construir asunto con formato ServiceDesk (contiene "Solicitud")
+        tipo_ticket = ticket_data['type']
+        asunto = f"Solicitud - {tipo_ticket} - {ticket_data['subject']}"
         
-        # Construir cuerpo en texto plano con formato ServiceDesk (@@campo: valor@@)
-        cuerpo_texto = f"""NUEVO TICKET CREADO EN EL PORTAL DE SERVICIOS TI
-{'='*60}
+        # Construir cuerpo en texto plano con formato ServiceDesk (@@CAMPO=VALOR@@)
+        cuerpo_texto = f"""@@ACCOUNT={ticket_data['account']}@@
+@@SITE={ticket_data['site']}@@
+@@OPERATION=AddRequest@@
+@@CATEGORY={ticket_data['category']}@@
+@@SUBCATEGORY={ticket_data['subcategory']}@@
+@@ITEM={ticket_data['item']}@@
+@@LEVEL={ticket_data['level']}@@
+@@MODE=Web Form@@
+@@PRIORITY={ticket_data['priority']}@@
+@@URGENCY={ticket_data['urgency']}@@
 
-@@ID_TICKET: {ticket_id}@@
-@@Empresa: {ticket_data['account']}@@
-@@Ubicacion: {ticket_data['site']}@@
-@@Nivel: {ticket_data['level']}@@
-@@Tipo: {ticket_data['type']}@@
-@@Categoria: {ticket_data['category']}@@
-@@Subcategoria: {ticket_data['subcategory']}@@
-@@Elemento_Afectado: {ticket_data['item']}@@
-@@Prioridad: {ticket_data['priority']}@@
-@@Urgencia: {ticket_data['urgency']}@@
-@@Asunto: {ticket_data['subject']}@@
 
-DESCRIPCIÓN DEL INCIDENTE:
-{'='*60}
 {ticket_data['description']}
-
-{'='*60}
-Este es un correo automático generado por el Portal de Servicios TI.
-Por favor, no responda directamente a este correo.
 """
         
         # Crear mensaje MIME en texto plano
@@ -171,7 +163,7 @@ with tab1:
                 subcategoria = st.text_input("Subcategoría", value="", key="subcategoria_incidente")
             
             with col2:
-                nivel = st.selectbox("Nivel", ["Nivel 1", "Nivel 2"], key="nivel_incidente")
+                nivel = st.selectbox("Nivel", ["Tier 1", "Tier 2"], key="nivel_incidente")
                 prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_incidente")
                 urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_incidente")
                 elemento = st.text_input("Elemento Afectado", value="", key="elemento_incidente")
@@ -242,7 +234,7 @@ with tab1:
                 subcategoria = st.text_input("Subcategoría", value="", key="subcategoria_requerimiento")
             
             with col2:
-                nivel = st.selectbox("Nivel", ["Nivel 1", "Nivel 2"], key="nivel_requerimiento")
+                nivel = st.selectbox("Nivel", ["Tier 1", "Tier 2"], key="nivel_requerimiento")
                 prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_requerimiento")
                 urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_requerimiento")
                 elemento = st.text_input("Elemento Afectado", value="", key="elemento_requerimiento")
