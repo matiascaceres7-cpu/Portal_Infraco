@@ -101,41 +101,42 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
 PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 
-# Diccionario de Categorías y Subcategorías dinámicas
+# Diccionario de Categorías y Subcategorías dinámicas (Nivel 1 - Helpdesk)
 CATEGORIAS_SUBCATEGORIAS = {
-    "Redes LAN/WAN": [
-        "Falla en Switches PoE",
-        "Problemas de Routing",
-        "Configuración Netmiko/Automatización"
+    "Impresoras / Multifuncionales": [
+        "Atasco de papel",
+        "Sin conexión / No imprime",
+        "Cambio de tóner",
+        "Manchas en la impresión"
     ],
-    "Infraestructura Inalámbrica (WiFi)": [
-        "Cortes de señal / Microcortes",
-        "Zonas de sombra de cobertura",
-        "Interferencia 5GHz",
-        "Falla de Access Points"
+    "Cámaras de Seguridad (CCTV)": [
+        "Cámara sin video / Pantalla negra",
+        "Cámara fuera de línea",
+        "Revisión de grabación"
     ],
-    "Seguridad Perimetral": [
-        "Bloqueo de Firewall",
-        "VPN caída",
-        "Políticas de acceso"
+    "Estaciones de Trabajo (PCs)": [
+        "Lentitud en el sistema",
+        "No enciende",
+        "Problema con periférico (Mouse/Teclado)"
     ],
-    "Cableado Estructurado": [
-        "Certificación de puntos",
-        "Revisión de inventario físico"
+    "Redes y Conectividad": [
+        "Sin acceso a Internet",
+        "Corte de señal WiFi",
+        "Punto de red dañado"
     ]
 }
 
 CATEGORIAS = list(CATEGORIAS_SUBCATEGORIAS.keys())
 
-# Plantillas de Descripción
-PLANTILLA_INCIDENTE = """Síntoma principal:
-Equipos afectados (Marca/Modelo/IP):
-Piso o ubicación exacta:
-Pruebas realizadas:"""
+# Plantillas de Descripción (Nivel 1)
+PLANTILLA_INCIDENTE = """Equipo afectado (PC / Impresora / Cámara):
+Dirección IP del equipo (si la conoce):
+Ubicación física (Piso / Oficina):
+Descripción del error o mensaje en pantalla:"""
 
-PLANTILLA_REQUERIMIENTO = """Descripción de la solicitud:
-Justificación del negocio:
-Fecha esperada de implementación:"""
+PLANTILLA_REQUERIMIENTO = """Tipo de solicitud (Instalación, Acceso, Insumos):
+Justificación:
+Fecha en la que necesita el servicio:"""
 
 # Inicializar estado de sesión
 if 'vista_actual' not in st.session_state:
@@ -176,7 +177,7 @@ if st.session_state.vista_actual is None:
     with col_incidente:
         # Intentar cargar imagen de incidente
         try:
-            st.image("frontend/banner_incidente.png", use_column_width=True)
+            st.image("frontend/banner_incidente.png", use_container_width=True)
         except FileNotFoundError:
             st.info("ℹ️ Imagen de incidente no disponible")
         
@@ -195,7 +196,7 @@ if st.session_state.vista_actual is None:
     with col_req:
         # Intentar cargar imagen de requerimiento
         try:
-            st.image("frontend/banner_requerimiento.png", use_column_width=True)
+            st.image("frontend/banner_requerimiento.png", use_container_width=True)
         except FileNotFoundError:
             st.info("ℹ️ Imagen de requerimiento no disponible")
         
@@ -281,7 +282,7 @@ else:
         # Elemento Afectado
         elemento = st.text_input(
             "Elemento Afectado",
-            placeholder="Ej: Switch, Servidor, Access Point",
+            placeholder="Ej: Impresora Xerox, Cámara PTZ, PC-001",
             key=f"elemento_{tipo_selected}"
         )
         
@@ -357,98 +358,3 @@ else:
                     
                 except Exception as e:
                     st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
-
-# ============================================
-# FOOTER: TABS DE HISTORIAL Y USUARIOS
-# ============================================
-st.markdown("---")
-
-tab_historial, tab_usuarios = st.tabs(["📊 Historial de Tickets", "👥 Gestión de Usuarios"])
-
-# ============================================
-# TAB: HISTORIAL DE TICKETS
-# ============================================
-with tab_historial:
-    st.markdown("### Historial de Tickets")
-    
-    if st.button("🔄 Actualizar", key="btn_historial"):
-        try:
-            tickets_list = []
-            for doc in db.collection('tickets').stream():
-                ticket_dict = doc.to_dict()
-                ticket_dict['id'] = doc.id
-                tickets_list.append(ticket_dict)
-            
-            if tickets_list:
-                total_tickets = len(tickets_list)
-                total_incidentes = sum(1 for t in tickets_list if t.get("type") == "Incidente")
-                total_req = sum(1 for t in tickets_list if t.get("type") == "Requerimiento")
-                
-                col_m1, col_m2, col_m3 = st.columns(3)
-                col_m1.metric("Total", total_tickets)
-                col_m2.metric("Incidentes", total_incidentes)
-                col_m3.metric("Requerimientos", total_req)
-                
-                st.markdown("---")
-                st.dataframe(tickets_list, use_container_width=True)
-            else:
-                st.info("No hay tickets registrados.")
-        except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
-
-# ============================================
-# TAB: GESTIÓN DE USUARIOS
-# ============================================
-with tab_usuarios:
-    st.markdown("### Gestión de Usuarios")
-    
-    col_reg, col_list = st.columns(2)
-    
-    with col_reg:
-        st.markdown("#### Registrar Nuevo Usuario")
-        
-        with st.form("user_form"):
-            email = st.text_input("📧 Correo Electrónico")
-            full_name = st.text_input("👤 Nombre Completo")
-            department = st.text_input("🏢 Departamento")
-            role = st.selectbox("🔐 Rol", ["user", "admin", "technician"])
-            
-            submitted_user = st.form_submit_button("✅ Registrar", use_container_width=True)
-            
-            if submitted_user:
-                if not email or not full_name or not department:
-                    st.error("❌ Todos los campos son obligatorios.")
-                else:
-                    user_data = {
-                        "email": email,
-                        "full_name": full_name,
-                        "department": department,
-                        "role": role,
-                        "created_at": datetime.now()
-                    }
-                    
-                    try:
-                        doc_ref = db.collection('users').add(user_data)
-                        st.success(f"✅ Usuario registrado: {doc_ref[1].id}")
-                        st.balloons()
-                    except Exception as e:
-                        st.error(f"❌ Error: {str(e)}")
-    
-    with col_list:
-        st.markdown("#### Usuarios Registrados")
-        
-        if st.button("🔄 Cargar", key="btn_usuarios"):
-            try:
-                users_list = []
-                for doc in db.collection('users').stream():
-                    user_dict = doc.to_dict()
-                    user_dict['id'] = doc.id
-                    users_list.append(user_dict)
-                
-                if users_list:
-                    st.dataframe(users_list, use_container_width=True)
-                    st.info(f"Total: {len(users_list)} usuarios")
-                else:
-                    st.info("No hay usuarios registrados.")
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
