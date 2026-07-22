@@ -1,7 +1,18 @@
 [theme]
-base="dark"
-primaryColor="#005b9f"
-backgroundColor="#0a1324"
-secondaryBackgroundColor="#17263d"
-textColor="#ffffff"
-font="sans serif"
+# Forzar el tema claro corporativo
+base = "light"
+
+# Color principal para botones y resaltados (Rojo corporativo)
+primaryColor = "#d9232e"
+
+# Color de fondo principal
+backgroundColor = "#ffffff"
+
+# Color de fondo secundario (para el panel lateral)
+secondaryBackgroundColor = "#f4f6f9"
+
+# Color del texto (Gris oscuro para máxima legibilidad)
+textColor = "#262730"
+
+# Tipo de fuente
+font = "sans serif"
