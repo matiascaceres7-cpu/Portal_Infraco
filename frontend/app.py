@@ -4,29 +4,113 @@ import streamlit as st
 from google.cloud import firestore
 from google.oauth2 import service_account
 from email.mime.text import MIMEText
+from datetime import datetime
 
-st.set_page_config(page_title="IT Service Desk", page_icon="🔧", layout="wide")
-# --- CSS Personalizado para ocultar marca de Streamlit ---
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
-st.title("Portal de Servicios TI")
+st.set_page_config(page_title="Portal de Servicios Infraco", page_icon="🔧", layout="wide")
 
-# Construir ruta absoluta al logo basada en la ubicación de este script
-current_dir = os.path.dirname(os.path.abspath(__file__))
-logo_path = os.path.join(current_dir, "Logo.png")
+# --- CSS Personalizado para tema corporativo limpio ---
+css_personalizado = """
+<style>
+    /* Fondo general claro */
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    
+    [data-testid="stMainBlockContainer"] {
+        background-color: #f5f5f5;
+        padding: 0;
+    }
+    
+    [data-testid="stAppViewContainer"] {
+        background-color: #f5f5f5;
+    }
+    
+    /* Ocultar elementos de Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Tarjetas de contenedor */
+    [data-testid="stVerticalBlock"] > [data-testid="element-container"] {
+        background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 10px 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Botones estilizados */
+    button {
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    /* Inputs y selectbox */
+    input, select, textarea {
+        border-radius: 8px !important;
+        border: 1px solid #e0e0e0 !important;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+        border-color: #0052a3 !important;
+        box-shadow: 0 0 0 2px rgba(0, 82, 163, 0.1) !important;
+    }
+    
+    /* Títulos y textos */
+    h1, h2, h3 {
+        color: #1a1a1a !important;
+        font-weight: 700 !important;
+    }
+    
+    p, label, div {
+        color: #404040 !important;
+    }
+    
+    /* Métrica */
+    [data-testid="metric-container"] {
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 16px;
+        border: 1px solid #efefef;
+    }
+    
+    /* Dataframe */
+    [data-testid="stDataFrame"] {
+        border-radius: 8px !important;
+        border: 1px solid #efefef !important;
+    }
+</style>
+"""
 
-try:
-    st.image(logo_path, width=250)
-except Exception:
-    st.warning("⚠️ No se encontró el archivo logo.png en el directorio del frontend.")
+st.markdown(css_personalizado, unsafe_allow_html=True)
 
-st.subheader("Sistema Integral de Gestión de Tickets y Usuarios")
+# --- Banner Principal Corporativo ---
+banner_html = """
+<div style="
+    background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+    padding: 40px 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 82, 163, 0.15);
+    text-align: center;
+">
+    <h1 style="color: white; margin-bottom: 10px; font-size: 2.5em;">
+        ¡Bienvenido al Portal de Servicios Infraco!
+    </h1>
+    <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin: 0;">
+        Genera tickets para Incidentes y Requerimientos de forma rápida y segura
+    </p>
+</div>
+"""
+
+st.markdown(banner_html, unsafe_allow_html=True)
 
 # ============================================
 # CONEXIÓN A FIRESTORE
@@ -123,68 +207,187 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
         st.warning(f"⚠️ Error al enviar correo transaccional: {str(e)}. El ticket fue creado correctamente.")
         return False
 
-# Mapeo de prioridad y urgencia (español -> inglés)
+# ============================================
+# CONFIGURACIONES Y MAPEOS
+# ============================================
 PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
-
-# Categorías estándar de infraestructura
 CATEGORIAS = ["Network", "Hardware", "Software", "Accesos", "Telefonía", "Servidores"]
 
-# Crear las tres pestañas principales
-tab1, tab2, tab3 = st.tabs(["Generar Ticket", "Historial de Tickets", "Gestión de Usuarios"])
+# Inicializar estado de sesión
+if 'vista_actual' not in st.session_state:
+    st.session_state.vista_actual = None
 
 # ============================================
-# PESTAÑA 1: GENERAR TICKET (MODULAR CON TABS)
+# LAYOUT PRINCIPAL CON COLUMNAS
 # ============================================
-with tab1:
-    st.header("📝 Generación de Tickets")
-    st.write("Complete los parámetros del ticket (Estándar ManageEngine)")
+col_principal, col_lateral = st.columns([7, 3])
+
+# ============================================
+# PANEL LATERAL: MIS ELEMENTOS ACTIVOS
+# ============================================
+with col_lateral:
+    st.markdown("### 📊 Mis elementos activos")
     
-    # Crear tabs para Incidente y Requerimiento
-    tab_incidente, tab_requerimiento = st.tabs(["Incidente", "Requerimiento"])
+    try:
+        # Contar tickets totales
+        tickets_total = 0
+        for doc in db.collection('tickets').stream():
+            tickets_total += 1
+        
+        st.metric(label="Solicitudes Totales", value=tickets_total)
+        
+        # Mostrar estado del sistema
+        st.markdown("---")
+        st.markdown("#### Estado del Sistema")
+        st.success("✅ Firestore conectado")
+        st.success("✅ Email configurado")
+        
+    except Exception as e:
+        st.error(f"⚠️ Error al consultar: {str(e)}")
+
+# ============================================
+# PANEL PRINCIPAL: FORMULARIO Y TARJETAS
+# ============================================
+with col_principal:
     
-    # ============================================
-    # SUB-TAB: INCIDENTE
-    # ============================================
-    with tab_incidente:
-        # Banner de Incidente (placeholder)
-        st.image("https://via.placeholder.com/800x150?text=Banner+Incidente", use_column_width=True)
+    # Si no hay vista seleccionada, mostrar tarjetas de selección
+    if st.session_state.vista_actual is None:
+        st.markdown("### Selecciona el tipo de solicitud")
         
-        st.subheader("📌 Formulario de Incidente")
+        col_incidente, col_req = st.columns(2)
         
-        with st.form("ticket_form_incidente"):
-            st.markdown("---")
+        with col_incidente:
+            if st.button(
+                "📄 INCIDENTE\n\nReportar una falla o problema\nque requiere atención inmediata",
+                use_container_width=True,
+                key="btn_incidente"
+            ):
+                st.session_state.vista_actual = "Incidente"
+                st.rerun()
+        
+        with col_req:
+            if st.button(
+                "📝 REQUERIMIENTO\n\nSolicitar un nuevo servicio\no mejora del sistema",
+                use_container_width=True,
+                key="btn_requerimiento"
+            ):
+                st.session_state.vista_actual = "Requerimiento"
+                st.rerun()
+    
+    # Si hay vista seleccionada, mostrar formulario
+    else:
+        tipo_selected = st.session_state.vista_actual
+        
+        # Botón para volver
+        if st.button("← Volver a seleccionar tipo", use_container_width=False):
+            st.session_state.vista_actual = None
+            st.rerun()
+        
+        st.markdown(f"### Nuevo {tipo_selected}")
+        st.markdown("Completa los campos para crear tu solicitud")
+        st.markdown("---")
+        
+        # Formulario dinámico
+        with st.form(f"form_{tipo_selected.lower()}"):
             
+            # Primera fila
             col1, col2 = st.columns(2)
+            
             with col1:
-                empresa = st.text_input("Empresa", value="On NetFibra", disabled=True, key="empresa_incidente")
-                ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_incidente")
-                categoria = st.selectbox("Categoría", CATEGORIAS, key="categoria_incidente")
-                subcategoria = st.text_input("Subcategoría", value="", key="subcategoria_incidente")
+                empresa = st.text_input(
+                    "Empresa",
+                    value="On NetFibra",
+                    disabled=True,
+                    key=f"empresa_{tipo_selected}"
+                )
+                ubicacion = st.selectbox(
+                    "Ubicación",
+                    ["Piso 14", "Piso 15", "Remoto"],
+                    key=f"ubicacion_{tipo_selected}"
+                )
+                categoria = st.selectbox(
+                    "Categoría",
+                    CATEGORIAS,
+                    key=f"categoria_{tipo_selected}"
+                )
             
             with col2:
-                nivel = st.selectbox("Nivel", ["Tier 1", "Tier 2"], key="nivel_incidente")
-                prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_incidente")
-                urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_incidente")
-                elemento = st.text_input("Elemento Afectado", value="", key="elemento_incidente")
+                nivel = st.selectbox(
+                    "Nivel",
+                    ["Tier 1", "Tier 2"],
+                    key=f"nivel_{tipo_selected}"
+                )
+                prioridad_es = st.selectbox(
+                    "Prioridad",
+                    ["Baja", "Media", "Alta"],
+                    key=f"prioridad_{tipo_selected}"
+                )
+                urgencia_es = st.selectbox(
+                    "Urgencia",
+                    ["Baja", "Media", "Alta"],
+                    key=f"urgencia_{tipo_selected}"
+                )
+            
+            # Segunda fila
+            subcategoria = st.text_input(
+                "Subcategoría",
+                placeholder="Ej: WiFi, Base de datos, Conectividad",
+                key=f"subcategoria_{tipo_selected}"
+            )
+            
+            elemento = st.text_input(
+                "Elemento Afectado",
+                placeholder="Ej: Switch de Piso 14, Servidor DB-001",
+                key=f"elemento_{tipo_selected}"
+            )
+            
+            # Tercera fila
+            asunto = st.text_input(
+                "Asunto",
+                placeholder="Título breve del problema o solicitud",
+                key=f"asunto_{tipo_selected}"
+            )
+            
+            descripcion = st.text_area(
+                "Descripción Detallada",
+                placeholder="Describe con detalle el problema, pasos reproducibles, o detalles de la solicitud...",
+                height=150,
+                key=f"descripcion_{tipo_selected}"
+            )
             
             st.markdown("---")
-            asunto = st.text_input("Asunto", value="", key="asunto_incidente")
-            descripcion = st.text_area("Descripción Detallada", placeholder="Ingrese los detalles del incidente...", key="descripcion_incidente")
             
-            submitted = st.form_submit_button("✅ Crear Incidente")
+            # Botones de acción
+            col_btn1, col_btn2 = st.columns(2)
             
+            with col_btn1:
+                submitted = st.form_submit_button(
+                    f"✅ Enviar {tipo_selected}",
+                    use_container_width=True,
+                    type="primary"
+                )
+            
+            with col_btn2:
+                st.form_submit_button(
+                    "🔄 Limpiar",
+                    use_container_width=True,
+                    type="secondary"
+                )
+            
+            # Procesar envío
             if submitted:
-                # Validación de campos obligatorios
-                if not asunto or not descripcion:
+                # Validación
+                if not asunto.strip() or not descripcion.strip():
                     st.error("❌ Asunto y Descripción son campos obligatorios.")
                 else:
-                    # Mapeo de prioridad y urgencia a inglés
+                    # Mapeo de prioridad y urgencia
                     prioridad = PRIORITY_MAP[prioridad_es]
                     urgencia = URGENCY_MAP[urgencia_es]
                     
+                    # Preparar datos del ticket
                     ticket_data = {
-                        "type": "Incidente",
+                        "type": tipo_selected,
                         "account": empresa,
                         "site": ubicacion,
                         "category": categoria,
@@ -194,126 +397,70 @@ with tab1:
                         "priority": prioridad,
                         "urgency": urgencia,
                         "subject": asunto,
-                        "description": descripcion
+                        "description": descripcion,
+                        "created_at": datetime.now()
                     }
                     
                     try:
-                        # Agregar el documento a la colección 'tickets' en Firestore
+                        # Guardar en Firestore
                         doc_ref = db.collection('tickets').add(ticket_data)
                         ticket_id = doc_ref[1].id
                         
-                        st.success(f"✅ Incidente creado exitosamente con ID: {ticket_id}")
-                        
-                        # Enviar correo técnico de notificación
+                        # Enviar correo técnico
                         email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
                         
-                        if email_enviado:
-                            st.info("📧 Notificación enviada al equipo técnico.")
-                        
-                        st.balloons()
-                    except Exception as e:
-                        st.error(f"❌ Error al crear el incidente: {str(e)}")
-    
-    # ============================================
-    # SUB-TAB: REQUERIMIENTO
-    # ============================================
-    with tab_requerimiento:
-        # Banner de Requerimiento (placeholder)
-        st.image("https://via.placeholder.com/800x150?text=Banner+Requerimiento", use_column_width=True)
-        
-        st.subheader("📌 Formulario de Requerimiento")
-        
-        with st.form("ticket_form_requerimiento"):
-            st.markdown("---")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                empresa = st.text_input("Empresa", value="On NetFibra", disabled=True, key="empresa_requerimiento")
-                ubicacion = st.selectbox("Ubicación", ["Piso 14", "Piso 15", "Remoto"], key="ubicacion_requerimiento")
-                categoria = st.selectbox("Categoría", CATEGORIAS, key="categoria_requerimiento")
-                subcategoria = st.text_input("Subcategoría", value="", key="subcategoria_requerimiento")
-            
-            with col2:
-                nivel = st.selectbox("Nivel", ["Tier 1", "Tier 2"], key="nivel_requerimiento")
-                prioridad_es = st.selectbox("Prioridad", ["Baja", "Media", "Alta"], key="prioridad_requerimiento")
-                urgencia_es = st.selectbox("Urgencia", ["Baja", "Media", "Alta"], key="urgencia_requerimiento")
-                elemento = st.text_input("Elemento Afectado", value="", key="elemento_requerimiento")
-            
-            st.markdown("---")
-            asunto = st.text_input("Asunto", value="", key="asunto_requerimiento")
-            descripcion = st.text_area("Descripción Detallada", placeholder="Ingrese los detalles del requerimiento...", key="descripcion_requerimiento")
-            
-            submitted = st.form_submit_button("✅ Crear Requerimiento")
-            
-            if submitted:
-                # Validación de campos obligatorios
-                if not asunto or not descripcion:
-                    st.error("❌ Asunto y Descripción son campos obligatorios.")
-                else:
-                    # Mapeo de prioridad y urgencia a inglés
-                    prioridad = PRIORITY_MAP[prioridad_es]
-                    urgencia = URGENCY_MAP[urgencia_es]
-                    
-                    ticket_data = {
-                        "type": "Requerimiento",
-                        "account": empresa,
-                        "site": ubicacion,
-                        "category": categoria,
-                        "subcategory": subcategoria,
-                        "item": elemento,
-                        "level": nivel,
-                        "priority": prioridad,
-                        "urgency": urgencia,
-                        "subject": asunto,
-                        "description": descripcion
-                    }
-                    
-                    try:
-                        # Agregar el documento a la colección 'tickets' en Firestore
-                        doc_ref = db.collection('tickets').add(ticket_data)
-                        ticket_id = doc_ref[1].id
-                        
-                        st.success(f"✅ Requerimiento creado exitosamente con ID: {ticket_id}")
-                        
-                        # Enviar correo técnico de notificación
-                        email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                        # Mostrar mensajes de éxito
+                        st.success(f"✅ {tipo_selected} creado exitosamente")
+                        st.info(f"📋 ID del ticket: **{ticket_id}**")
                         
                         if email_enviado:
-                            st.info("📧 Notificación enviada al equipo técnico.")
+                            st.success("📧 Notificación enviada al equipo técnico")
                         
                         st.balloons()
+                        
+                        # Resetear vista después de 3 segundos
+                        import time
+                        time.sleep(2)
+                        st.session_state.vista_actual = None
+                        st.rerun()
+                        
                     except Exception as e:
-                        st.error(f"❌ Error al crear el requerimiento: {str(e)}")
+                        st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
 
 # ============================================
-# PESTAÑA 2: HISTORIAL DE TICKETS
+# PESTAÑA DE HISTORIAL Y USUARIOS (FOOTER)
 # ============================================
-with tab2:
-    st.header("📊 Historial y Respaldo de Tickets")
-    st.write("Visualización directa de la base de datos para auditoría y migración.")
+st.markdown("---")
+
+tab_historial, tab_usuarios = st.tabs(["📊 Historial de Tickets", "👥 Gestión de Usuarios"])
+
+# ============================================
+# HISTORIAL DE TICKETS
+# ============================================
+with tab_historial:
+    st.markdown("### Historial y Respaldo de Tickets")
+    st.markdown("Visualización directa de la base de datos para auditoría y migración.")
     
     if st.button("🔄 Actualizar Historial", key="btn_historial"):
         try:
-            # Leer todos los documentos de la colección 'tickets'
             tickets_list = []
             for doc in db.collection('tickets').stream():
                 ticket_dict = doc.to_dict()
-                ticket_dict['id'] = doc.id  # Incluir el ID del documento
+                ticket_dict['id'] = doc.id
                 tickets_list.append(ticket_dict)
             
             if tickets_list:
-                # --- Panel de Métricas ---
+                # Métricas
                 total_tickets = len(tickets_list)
                 total_incidentes = sum(1 for t in tickets_list if t.get("type") == "Incidente")
                 total_req = sum(1 for t in tickets_list if t.get("type") == "Requerimiento")
                 
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Total de Tickets", total_tickets)
-                col2.metric("Incidentes", total_incidentes)
-                col3.metric("Requerimientos", total_req)
-                st.markdown("---")
+                col_m1, col_m2, col_m3 = st.columns(3)
+                col_m1.metric("Total de Tickets", total_tickets)
+                col_m2.metric("Incidentes", total_incidentes)
+                col_m3.metric("Requerimientos", total_req)
                 
-                # Despliegue de la tabla
+                st.markdown("---")
                 st.dataframe(tickets_list, use_container_width=True)
             else:
                 st.info("La base de datos está conectada, pero aún no hay tickets registrados.")
@@ -321,63 +468,58 @@ with tab2:
             st.error(f"❌ Error al consultar Firestore: {str(e)}")
 
 # ============================================
-# PESTAÑA 3: GESTIÓN DE USUARIOS
+# GESTIÓN DE USUARIOS
 # ============================================
-with tab3:
-    st.header("👥 Gestión de Usuarios")
+with tab_usuarios:
+    st.markdown("### Gestión de Usuarios")
     
-    # Sección: Registrar nuevo usuario
-    st.subheader("➕ Registrar Nuevo Usuario")
+    col_reg, col_list = st.columns(2)
     
-    with st.form("user_form"):
-        col1, col2 = st.columns(2)
-        with col1:
+    with col_reg:
+        st.markdown("#### ➕ Registrar Nuevo Usuario")
+        
+        with st.form("user_form"):
             email = st.text_input("📧 Correo Electrónico", placeholder="usuario@example.com", key="email_user")
             full_name = st.text_input("👤 Nombre Completo", placeholder="Juan Pérez", key="full_name_user")
-        
-        with col2:
             department = st.text_input("🏢 Departamento", placeholder="Infraestructura TI", key="department_user")
             role = st.selectbox("🔐 Rol", ["user", "admin", "technician"], key="role_user")
-        
-        submitted_user = st.form_submit_button("✅ Registrar Usuario")
-        
-        if submitted_user:
-            if not email or not full_name or not department:
-                st.error("❌ Todos los campos son obligatorios.")
-            else:
-                user_data = {
-                    "email": email,
-                    "full_name": full_name,
-                    "department": department,
-                    "role": role
-                }
-                
-                try:
-                    # Agregar el usuario a la colección 'users' en Firestore
-                    doc_ref = db.collection('users').add(user_data)
-                    st.success(f"✅ Usuario registrado exitosamente con ID: {doc_ref[1].id}")
-                    st.balloons()
-                except Exception as e:
-                    st.error(f"❌ Error al registrar el usuario: {str(e)}")
-    
-    st.markdown("---")
-    
-    # Sección: Listar usuarios registrados
-    st.subheader("📋 Usuarios Registrados")
-    
-    if st.button("🔄 Cargar Usuarios", key="btn_usuarios"):
-        try:
-            # Leer todos los documentos de la colección 'users'
-            users_list = []
-            for doc in db.collection('users').stream():
-                user_dict = doc.to_dict()
-                user_dict['id'] = doc.id  # Incluir el ID del documento
-                users_list.append(user_dict)
             
-            if users_list:
-                st.dataframe(users_list, use_container_width=True)
-                st.info(f"📌 Total de usuarios registrados: {len(users_list)}")
-            else:
-                st.info("No hay usuarios registrados en la base de datos.")
-        except Exception as e:
-            st.error(f"❌ Error al cargar usuarios: {str(e)}")
+            submitted_user = st.form_submit_button("✅ Registrar Usuario", use_container_width=True)
+            
+            if submitted_user:
+                if not email or not full_name or not department:
+                    st.error("❌ Todos los campos son obligatorios.")
+                else:
+                    user_data = {
+                        "email": email,
+                        "full_name": full_name,
+                        "department": department,
+                        "role": role,
+                        "created_at": datetime.now()
+                    }
+                    
+                    try:
+                        doc_ref = db.collection('users').add(user_data)
+                        st.success(f"✅ Usuario registrado exitosamente con ID: {doc_ref[1].id}")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"❌ Error al registrar el usuario: {str(e)}")
+    
+    with col_list:
+        st.markdown("#### 📋 Usuarios Registrados")
+        
+        if st.button("🔄 Cargar Usuarios", key="btn_usuarios"):
+            try:
+                users_list = []
+                for doc in db.collection('users').stream():
+                    user_dict = doc.to_dict()
+                    user_dict['id'] = doc.id
+                    users_list.append(user_dict)
+                
+                if users_list:
+                    st.dataframe(users_list, use_container_width=True)
+                    st.info(f"📌 Total de usuarios registrados: {len(users_list)}")
+                else:
+                    st.info("No hay usuarios registrados en la base de datos.")
+            except Exception as e:
+                st.error(f"❌ Error al cargar usuarios: {str(e)}")
