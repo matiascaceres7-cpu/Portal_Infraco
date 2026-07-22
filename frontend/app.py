@@ -148,17 +148,27 @@ with col_lateral:
         st.warning(f"⚠️ Error al consultar: {str(e)}")
 
 # ============================================
-# COLUMNA PRINCIPAL (7): FORMULARIO
+# COLUMNA PRINCIPAL (7): TARJETAS CON IMÁGENES Y BOTONES
 # ============================================
 with col_principal:
     
-    # Si no hay vista seleccionada, mostrar botones
+    # Si no hay vista seleccionada, mostrar tarjetas con imágenes y botones
     if st.session_state.vista_actual is None:
         st.markdown("### Selecciona el tipo de solicitud")
         
-        col_incidente, col_requerimiento = st.columns(2)
+        col_btn_incidente, col_btn_req = st.columns(2)
         
-        with col_incidente:
+        # ============================================
+        # TARJETA INCIDENTE (con imagen)
+        # ============================================
+        with col_btn_incidente:
+            # Intentar cargar imagen de incidente
+            try:
+                st.image("frontend/banner_incidente.png", use_column_width=True)
+            except FileNotFoundError:
+                st.info("ℹ️ Imagen de incidente no disponible")
+            
+            # Botón debajo de la imagen
             if st.button(
                 "📄 INCIDENTE",
                 use_container_width=True,
@@ -167,7 +177,17 @@ with col_principal:
                 st.session_state.vista_actual = "Incidente"
                 st.rerun()
         
-        with col_requerimiento:
+        # ============================================
+        # TARJETA REQUERIMIENTO (con imagen)
+        # ============================================
+        with col_btn_req:
+            # Intentar cargar imagen de requerimiento
+            try:
+                st.image("frontend/banner_requerimiento.png", use_column_width=True)
+            except FileNotFoundError:
+                st.info("ℹ️ Imagen de requerimiento no disponible")
+            
+            # Botón debajo de la imagen
             if st.button(
                 "📝 REQUERIMIENTO",
                 use_container_width=True,
@@ -176,7 +196,9 @@ with col_principal:
                 st.session_state.vista_actual = "Requerimiento"
                 st.rerun()
     
-    # Si hay vista seleccionada, mostrar formulario
+    # ============================================
+    # SECCIÓN DE FORMULARIO (cuando se selecciona tipo)
+    # ============================================
     else:
         tipo_selected = st.session_state.vista_actual
         
@@ -186,18 +208,6 @@ with col_principal:
             st.rerun()
         
         st.markdown(f"### {tipo_selected}")
-        
-        # Intentar cargar imagen de banner
-        if tipo_selected == "Incidente":
-            banner_path = "frontend/banner_incidente.png"
-        else:
-            banner_path = "frontend/banner_requerimiento.png"
-        
-        try:
-            st.image(banner_path, use_column_width=True)
-        except FileNotFoundError:
-            st.info(f"ℹ️ Imagen de banner no encontrada: {banner_path}")
-        
         st.markdown("---")
         
         # Formulario
