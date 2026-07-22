@@ -9,7 +9,7 @@ from datetime import datetime
 # ============================================
 # CONFIGURACIÓN DE PÁGINA
 # ============================================
-st.set_page_config(page_title="Portal de Servicios Infraco", page_icon="🔧", layout="wide")
+st.set_page_config(page_title="Portal de Servicios On NetFibra", page_icon="🔧", layout="wide")
 
 # ============================================
 # CONEXIÓN A FIRESTORE
@@ -100,7 +100,42 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
 # ============================================
 PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
-CATEGORIAS = ["Network", "Hardware", "Software", "Accesos", "Telefonía", "Servidores"]
+
+# Diccionario de Categorías y Subcategorías dinámicas
+CATEGORIAS_SUBCATEGORIAS = {
+    "Redes LAN/WAN": [
+        "Falla en Switches PoE",
+        "Problemas de Routing",
+        "Configuración Netmiko/Automatización"
+    ],
+    "Infraestructura Inalámbrica (WiFi)": [
+        "Cortes de señal / Microcortes",
+        "Zonas de sombra de cobertura",
+        "Interferencia 5GHz",
+        "Falla de Access Points"
+    ],
+    "Seguridad Perimetral": [
+        "Bloqueo de Firewall",
+        "VPN caída",
+        "Políticas de acceso"
+    ],
+    "Cableado Estructurado": [
+        "Certificación de puntos",
+        "Revisión de inventario físico"
+    ]
+}
+
+CATEGORIAS = list(CATEGORIAS_SUBCATEGORIAS.keys())
+
+# Plantillas de Descripción
+PLANTILLA_INCIDENTE = """Síntoma principal:
+Equipos afectados (Marca/Modelo/IP):
+Piso o ubicación exacta:
+Pruebas realizadas:"""
+
+PLANTILLA_REQUERIMIENTO = """Descripción de la solicitud:
+Justificación del negocio:
+Fecha esperada de implementación:"""
 
 # Inicializar estado de sesión
 if 'vista_actual' not in st.session_state:
@@ -119,219 +154,209 @@ banner_html = """
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 ">
     <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: bold;">
-        Portal de Servicios Infraco
+        ¡Bienvenido al Portal de Servicios On NetFibra!
     </h1>
 </div>
 """
 st.markdown(banner_html, unsafe_allow_html=True)
 
 # ============================================
-# LAYOUT PRINCIPAL: DOS COLUMNAS
+# LAYOUT CENTRADO: TARJETAS CON IMÁGENES Y BOTONES
 # ============================================
-col_principal, col_lateral = st.columns([7, 3])
 
-# ============================================
-# COLUMNA LATERAL (3): TICKETS ACTIVOS
-# ============================================
-with col_lateral:
-    st.markdown("### 📊 Tickets Activos")
+# Si no hay vista seleccionada, mostrar tarjetas
+if st.session_state.vista_actual is None:
+    st.markdown("### Selecciona el tipo de solicitud")
     
-    try:
-        # Contar tickets totales desde Firestore
-        total_tickets = 0
-        for doc in db.collection('tickets').stream():
-            total_tickets += 1
-        
-        st.metric(label="Total de Solicitudes", value=total_tickets)
-        
-    except Exception as e:
-        st.warning(f"⚠️ Error al consultar: {str(e)}")
-
-# ============================================
-# COLUMNA PRINCIPAL (7): TARJETAS CON IMÁGENES Y BOTONES
-# ============================================
-with col_principal:
-    
-    # Si no hay vista seleccionada, mostrar tarjetas con imágenes y botones
-    if st.session_state.vista_actual is None:
-        st.markdown("### Selecciona el tipo de solicitud")
-        
-        col_btn_incidente, col_btn_req = st.columns(2)
-        
-        # ============================================
-        # TARJETA INCIDENTE (con imagen)
-        # ============================================
-        with col_btn_incidente:
-            # Intentar cargar imagen de incidente
-            try:
-                st.image("frontend/banner_incidente.png", use_column_width=True)
-            except FileNotFoundError:
-                st.info("ℹ️ Imagen de incidente no disponible")
-            
-            # Botón debajo de la imagen
-            if st.button(
-                "📄 INCIDENTE",
-                use_container_width=True,
-                key="btn_incidente"
-            ):
-                st.session_state.vista_actual = "Incidente"
-                st.rerun()
-        
-        # ============================================
-        # TARJETA REQUERIMIENTO (con imagen)
-        # ============================================
-        with col_btn_req:
-            # Intentar cargar imagen de requerimiento
-            try:
-                st.image("frontend/banner_requerimiento.png", use_column_width=True)
-            except FileNotFoundError:
-                st.info("ℹ️ Imagen de requerimiento no disponible")
-            
-            # Botón debajo de la imagen
-            if st.button(
-                "📝 REQUERIMIENTO",
-                use_container_width=True,
-                key="btn_requerimiento"
-            ):
-                st.session_state.vista_actual = "Requerimiento"
-                st.rerun()
+    col_vacia1, col_incidente, col_req, col_vacia2 = st.columns([1, 2, 2, 1])
     
     # ============================================
-    # SECCIÓN DE FORMULARIO (cuando se selecciona tipo)
+    # TARJETA INCIDENTE (centrada)
     # ============================================
-    else:
-        tipo_selected = st.session_state.vista_actual
+    with col_incidente:
+        # Intentar cargar imagen de incidente
+        try:
+            st.image("frontend/banner_incidente.png", use_column_width=True)
+        except FileNotFoundError:
+            st.info("ℹ️ Imagen de incidente no disponible")
         
-        # Botón para volver
-        if st.button("← Volver", use_container_width=False):
-            st.session_state.vista_actual = None
+        # Botón debajo de la imagen
+        if st.button(
+            "📄 INCIDENTE",
+            use_container_width=True,
+            key="btn_incidente"
+        ):
+            st.session_state.vista_actual = "Incidente"
             st.rerun()
+    
+    # ============================================
+    # TARJETA REQUERIMIENTO (centrada)
+    # ============================================
+    with col_req:
+        # Intentar cargar imagen de requerimiento
+        try:
+            st.image("frontend/banner_requerimiento.png", use_column_width=True)
+        except FileNotFoundError:
+            st.info("ℹ️ Imagen de requerimiento no disponible")
         
-        st.markdown(f"### {tipo_selected}")
+        # Botón debajo de la imagen
+        if st.button(
+            "📝 REQUERIMIENTO",
+            use_container_width=True,
+            key="btn_requerimiento"
+        ):
+            st.session_state.vista_actual = "Requerimiento"
+            st.rerun()
+
+# ============================================
+# SECCIÓN DE FORMULARIO (cuando se selecciona tipo)
+# ============================================
+else:
+    tipo_selected = st.session_state.vista_actual
+    
+    # Botón para volver
+    if st.button("← Volver", use_container_width=False):
+        st.session_state.vista_actual = None
+        st.rerun()
+    
+    st.markdown(f"### {tipo_selected}")
+    st.markdown("---")
+    
+    # Determinar plantilla según tipo
+    if tipo_selected == "Incidente":
+        plantilla_descripcion = PLANTILLA_INCIDENTE
+    else:
+        plantilla_descripcion = PLANTILLA_REQUERIMIENTO
+    
+    # Formulario
+    with st.form(f"form_{tipo_selected.lower()}"):
+        
+        # Primera fila
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            empresa = st.text_input(
+                "Empresa",
+                value="On NetFibra",
+                disabled=True,
+                key=f"empresa_{tipo_selected}"
+            )
+            ubicacion = st.selectbox(
+                "Ubicación",
+                ["Piso 14", "Piso 15", "Remoto"],
+                key=f"ubicacion_{tipo_selected}"
+            )
+            # Categoria con subcategorías dinámicas
+            categoria = st.selectbox(
+                "Categoría",
+                CATEGORIAS,
+                key=f"categoria_{tipo_selected}"
+            )
+        
+        with col2:
+            nivel = st.selectbox(
+                "Nivel",
+                ["Tier 1", "Tier 2"],
+                key=f"nivel_{tipo_selected}"
+            )
+            prioridad_es = st.selectbox(
+                "Prioridad",
+                ["Baja", "Media", "Alta"],
+                key=f"prioridad_{tipo_selected}"
+            )
+            urgencia_es = st.selectbox(
+                "Urgencia",
+                ["Baja", "Media", "Alta"],
+                key=f"urgencia_{tipo_selected}"
+            )
+        
+        # Subcategoría dinámica según categoría seleccionada
+        subcategorias_disponibles = CATEGORIAS_SUBCATEGORIAS.get(categoria, [])
+        subcategoria = st.selectbox(
+            "Subcategoría",
+            subcategorias_disponibles,
+            key=f"subcategoria_{tipo_selected}"
+        )
+        
+        # Elemento Afectado
+        elemento = st.text_input(
+            "Elemento Afectado",
+            placeholder="Ej: Switch, Servidor, Access Point",
+            key=f"elemento_{tipo_selected}"
+        )
+        
+        # Asunto
+        asunto = st.text_input(
+            "Asunto",
+            placeholder="Título breve del problema o solicitud",
+            key=f"asunto_{tipo_selected}"
+        )
+        
+        # Descripción con plantilla dinámica
+        descripcion = st.text_area(
+            "Descripción Detallada",
+            value=plantilla_descripcion,
+            height=200,
+            key=f"descripcion_{tipo_selected}"
+        )
+        
         st.markdown("---")
         
-        # Formulario
-        with st.form(f"form_{tipo_selected.lower()}"):
-            
-            # Primera fila
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                empresa = st.text_input(
-                    "Empresa",
-                    value="On NetFibra",
-                    disabled=True,
-                    key=f"empresa_{tipo_selected}"
-                )
-                ubicacion = st.selectbox(
-                    "Ubicación",
-                    ["Piso 14", "Piso 15", "Remoto"],
-                    key=f"ubicacion_{tipo_selected}"
-                )
-                categoria = st.selectbox(
-                    "Categoría",
-                    CATEGORIAS,
-                    key=f"categoria_{tipo_selected}"
-                )
-                subcategoria = st.text_input(
-                    "Subcategoría",
-                    placeholder="Ej: WiFi, Base de datos",
-                    key=f"subcategoria_{tipo_selected}"
-                )
-            
-            with col2:
-                nivel = st.selectbox(
-                    "Nivel",
-                    ["Tier 1", "Tier 2"],
-                    key=f"nivel_{tipo_selected}"
-                )
-                prioridad_es = st.selectbox(
-                    "Prioridad",
-                    ["Baja", "Media", "Alta"],
-                    key=f"prioridad_{tipo_selected}"
-                )
-                urgencia_es = st.selectbox(
-                    "Urgencia",
-                    ["Baja", "Media", "Alta"],
-                    key=f"urgencia_{tipo_selected}"
-                )
-                elemento = st.text_input(
-                    "Elemento Afectado",
-                    placeholder="Ej: Switch, Servidor",
-                    key=f"elemento_{tipo_selected}"
-                )
-            
-            # Asunto y descripción
-            asunto = st.text_input(
-                "Asunto",
-                placeholder="Título breve",
-                key=f"asunto_{tipo_selected}"
-            )
-            
-            descripcion = st.text_area(
-                "Descripción Detallada",
-                placeholder="Describe el problema o solicitud...",
-                height=150,
-                key=f"descripcion_{tipo_selected}"
-            )
-            
-            st.markdown("---")
-            
-            # Botón de envío
-            submitted = st.form_submit_button(
-                f"✅ Enviar {tipo_selected}",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            # Procesar envío
-            if submitted:
-                if not asunto.strip() or not descripcion.strip():
-                    st.error("❌ Asunto y Descripción son campos obligatorios.")
-                else:
-                    prioridad = PRIORITY_MAP[prioridad_es]
-                    urgencia = URGENCY_MAP[urgencia_es]
+        # Botón de envío
+        submitted = st.form_submit_button(
+            f"✅ Enviar {tipo_selected}",
+            use_container_width=True,
+            type="primary"
+        )
+        
+        # Procesar envío
+        if submitted:
+            if not asunto.strip() or not descripcion.strip():
+                st.error("❌ Asunto y Descripción son campos obligatorios.")
+            else:
+                prioridad = PRIORITY_MAP[prioridad_es]
+                urgencia = URGENCY_MAP[urgencia_es]
+                
+                ticket_data = {
+                    "type": tipo_selected,
+                    "account": empresa,
+                    "site": ubicacion,
+                    "category": categoria,
+                    "subcategory": subcategoria,
+                    "item": elemento,
+                    "level": nivel,
+                    "priority": prioridad,
+                    "urgency": urgencia,
+                    "subject": asunto,
+                    "description": descripcion,
+                    "created_at": datetime.now()
+                }
+                
+                try:
+                    # Guardar en Firestore
+                    doc_ref = db.collection('tickets').add(ticket_data)
+                    ticket_id = doc_ref[1].id
                     
-                    ticket_data = {
-                        "type": tipo_selected,
-                        "account": empresa,
-                        "site": ubicacion,
-                        "category": categoria,
-                        "subcategory": subcategoria,
-                        "item": elemento,
-                        "level": nivel,
-                        "priority": prioridad,
-                        "urgency": urgencia,
-                        "subject": asunto,
-                        "description": descripcion,
-                        "created_at": datetime.now()
-                    }
+                    # Enviar correo técnico
+                    email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
                     
-                    try:
-                        # Guardar en Firestore
-                        doc_ref = db.collection('tickets').add(ticket_data)
-                        ticket_id = doc_ref[1].id
-                        
-                        # Enviar correo técnico
-                        email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
-                        
-                        # Mensajes de éxito
-                        st.success(f"✅ {tipo_selected} creado exitosamente")
-                        st.info(f"📋 ID del ticket: **{ticket_id}**")
-                        
-                        if email_enviado:
-                            st.success("📧 Notificación enviada al equipo técnico")
-                        
-                        st.balloons()
-                        
-                        # Resetear vista
-                        import time
-                        time.sleep(2)
-                        st.session_state.vista_actual = None
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
+                    # Mensajes de éxito
+                    st.success(f"✅ {tipo_selected} creado exitosamente")
+                    st.info(f"📋 ID del ticket: **{ticket_id}**")
+                    
+                    if email_enviado:
+                        st.success("📧 Notificación enviada al equipo técnico")
+                    
+                    st.balloons()
+                    
+                    # Resetear vista
+                    import time
+                    time.sleep(2)
+                    st.session_state.vista_actual = None
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
 
 # ============================================
 # FOOTER: TABS DE HISTORIAL Y USUARIOS
