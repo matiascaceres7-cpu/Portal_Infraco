@@ -103,6 +103,11 @@ URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 
 # Diccionario de Categorías y Subcategorías dinámicas (Nivel 1 - Helpdesk)
 categorias_dict = {
+    "Instalación de Software / Aplicaciones": [
+        "Solicitar instalación de software con restricción (Ej: Project, Visio)",
+        "Actualización de un programa",
+        "Otro"
+    ],
     "Impresoras / Multifuncionales": [
         "Atasco de papel",
         "Sin conexión / No imprime",
@@ -133,15 +138,18 @@ categorias_dict = {
 
 CATEGORIAS = list(categorias_dict.keys())
 
-# Plantillas de Descripción (Nivel 1)
-PLANTILLA_INCIDENTE = """Equipo afectado (PC / Impresora / Cámara):
-Dirección IP del equipo (si la conoce):
-Ubicación física (Piso / Oficina):
-Descripción del error o mensaje en pantalla:"""
+# Plantillas de Descripción Simplificadas (Sin tecnicismos)
+PLANTILLA_INCIDENTE = """¿Qué equipo te está fallando? (Ej: Mi notebook, la impresora del pasillo):
 
-PLANTILLA_REQUERIMIENTO = """Tipo de solicitud (Instalación, Acceso, Insumos):
-Justificación:
-Fecha en la que necesita el servicio:"""
+¿Dónde estás ubicado? (Ej: Piso 3, Oficina de Finanzas):
+
+Describe el problema detalladamente:"""
+
+PLANTILLA_REQUERIMIENTO = """¿Qué necesitas que hagamos?:
+
+¿Para cuándo lo necesitas?:
+
+Justificación de la solicitud:"""
 
 # Inicializar estado de sesión
 if 'vista_actual' not in st.session_state:
@@ -234,158 +242,159 @@ else:
     else:
         plantilla_descripcion = PLANTILLA_REQUERIMIENTO
     
-    # Formulario
-    with st.form(f"form_{tipo_selected.lower()}"):
-        
-        # Primera fila
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            empresa = st.text_input(
-                "Empresa",
-                value="On NetFibra",
-                disabled=True,
-                key=f"empresa_{tipo_selected}"
-            )
-            ubicacion = st.selectbox(
-                "Ubicación",
-                ["Piso 14", "Piso 15", "Remoto"],
-                key=f"ubicacion_{tipo_selected}"
-            )
-            # Categoria con subcategorías dinámicas
-            categoria_seleccionada = st.selectbox(
-                "Categoría",
-                CATEGORIAS,
-                key=f"categoria_{tipo_selected}"
-            )
-            
-            # Si elige "Otro" en categoría, mostrar campo de texto libre
-            if categoria_seleccionada == "Otro":
-                categoria_final = st.text_input(
-                    "Especifique la Categoría",
-                    placeholder="Ingrese la categoría",
-                    key=f"categoria_otro_{tipo_selected}"
-                )
-            else:
-                categoria_final = categoria_seleccionada
-        
-        with col2:
-            nivel = st.selectbox(
-                "Nivel",
-                ["Tier 1", "Tier 2"],
-                key=f"nivel_{tipo_selected}"
-            )
-            prioridad_es = st.selectbox(
-                "Prioridad",
-                ["Baja", "Media", "Alta"],
-                key=f"prioridad_{tipo_selected}"
-            )
-            urgencia_es = st.selectbox(
-                "Urgencia",
-                ["Baja", "Media", "Alta"],
-                key=f"urgencia_{tipo_selected}"
-            )
-        
-        # Subcategoría dinámica según categoría seleccionada
-        subcategorias_disponibles = categorias_dict.get(categoria_seleccionada, ["Otro"])
-        subcategoria_seleccionada = st.selectbox(
-            "Subcategoría",
-            subcategorias_disponibles,
-            key=f"subcategoria_{tipo_selected}"
+    # ============================================
+    # CAMPOS FUERA DE st.form PARA DINÁMICA EN TIEMPO REAL
+    # ============================================
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        empresa = st.text_input(
+            "Empresa",
+            value="On NetFibra",
+            disabled=True,
+            key=f"empresa_{tipo_selected}"
+        )
+        ubicacion = st.selectbox(
+            "Ubicación",
+            ["Piso 14", "Piso 15", "Remoto"],
+            key=f"ubicacion_{tipo_selected}"
+        )
+        # Categoria con subcategorías dinámicas (FUERA DE FORM)
+        categoria_seleccionada = st.selectbox(
+            "Categoría",
+            CATEGORIAS,
+            key=f"categoria_{tipo_selected}"
         )
         
-        # Si elige "Otro" en subcategoría, mostrar campo de texto libre
-        if subcategoria_seleccionada == "Otro":
-            subcategoria_final = st.text_input(
-                "Especifique la Subcategoría",
-                placeholder="Ingrese la subcategoría",
-                key=f"subcategoria_otro_{tipo_selected}"
+        # Si elige "Otro" en categoría, mostrar campo de texto libre
+        if categoria_seleccionada == "Otro":
+            categoria_final = st.text_input(
+                "Especifique la Categoría",
+                placeholder="Ingrese la categoría",
+                key=f"categoria_otro_{tipo_selected}"
             )
         else:
-            subcategoria_final = subcategoria_seleccionada
-        
-        # Elemento Afectado
-        elemento = st.text_input(
-            "Elemento Afectado",
-            placeholder="Ej: Impresora Xerox, Cámara web Logitech, PC-001",
-            key=f"elemento_{tipo_selected}"
+            categoria_final = categoria_seleccionada
+    
+    with col2:
+        nivel = st.selectbox(
+            "Nivel",
+            ["Tier 1", "Tier 2"],
+            key=f"nivel_{tipo_selected}"
         )
-        
-        # Asunto
-        asunto = st.text_input(
-            "Asunto",
-            placeholder="Título breve del problema o solicitud",
-            key=f"asunto_{tipo_selected}"
+        prioridad_es = st.selectbox(
+            "Prioridad",
+            ["Baja", "Media", "Alta"],
+            key=f"prioridad_{tipo_selected}"
         )
-        
-        # Descripción con plantilla dinámica
-        descripcion = st.text_area(
-            "Descripción Detallada",
-            value=plantilla_descripcion,
-            height=200,
-            key=f"descripcion_{tipo_selected}"
+        urgencia_es = st.selectbox(
+            "Urgencia",
+            ["Baja", "Media", "Alta"],
+            key=f"urgencia_{tipo_selected}"
         )
-        
-        st.markdown("---")
-        
-        # Botón de envío
-        submitted = st.form_submit_button(
-            f"✅ Enviar {tipo_selected}",
-            use_container_width=True,
-            type="primary"
+    
+    # Subcategoría dinámica según categoría seleccionada (FUERA DE FORM)
+    subcategorias_disponibles = categorias_dict.get(categoria_seleccionada, ["Otro"])
+    subcategoria_seleccionada = st.selectbox(
+        "Subcategoría",
+        subcategorias_disponibles,
+        key=f"subcategoria_{tipo_selected}"
+    )
+    
+    # Si elige "Otro" en subcategoría, mostrar campo de texto libre
+    if subcategoria_seleccionada == "Otro":
+        subcategoria_final = st.text_input(
+            "Especifique la Subcategoría",
+            placeholder="Ingrese la subcategoría",
+            key=f"subcategoria_otro_{tipo_selected}"
         )
-        
-        # Procesar envío
-        if submitted:
-            if not asunto.strip() or not descripcion.strip():
-                st.error("❌ Asunto y Descripción son campos obligatorios.")
-            else:
-                # Validar que categoria_final y subcategoria_final no estén vacías si eligió "Otro"
-                if categoria_seleccionada == "Otro" and not categoria_final.strip():
-                    st.error("❌ Debe especificar la categoría.")
-                elif subcategoria_seleccionada == "Otro" and not subcategoria_final.strip():
-                    st.error("❌ Debe especificar la subcategoría.")
-                else:
-                    prioridad = PRIORITY_MAP[prioridad_es]
-                    urgencia = URGENCY_MAP[urgencia_es]
-                    
-                    ticket_data = {
-                        "type": tipo_selected,
-                        "account": empresa,
-                        "site": ubicacion,
-                        "category": categoria_final,  # Variable final con "Otro" resuelto
-                        "subcategory": subcategoria_final,  # Variable final con "Otro" resuelto
-                        "item": elemento,
-                        "level": nivel,
-                        "priority": prioridad,
-                        "urgency": urgencia,
-                        "subject": asunto,
-                        "description": descripcion,
-                        "created_at": datetime.now()
-                    }
-                    
-                    try:
-                        # Guardar en Firestore
-                        doc_ref = db.collection('tickets').add(ticket_data)
-                        ticket_id = doc_ref[1].id
-                        
-                        # Enviar correo técnico
-                        email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
-                        
-                        # Mensajes de éxito
-                        st.success(f"✅ {tipo_selected} creado exitosamente")
-                        st.info(f"📋 ID del ticket: **{ticket_id}**")
-                        
-                        if email_enviado:
-                            st.success("📧 Notificación enviada al equipo técnico")
-                        
-                        st.balloons()
-                        
-                        # Resetear vista
-                        import time
-                        time.sleep(2)
-                        st.session_state.vista_actual = None
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
+    else:
+        subcategoria_final = subcategoria_seleccionada
+    
+    # Elemento Afectado
+    elemento = st.text_input(
+        "Elemento Afectado",
+        placeholder="Ej: Mi notebook, la impresora del pasillo, el router",
+        key=f"elemento_{tipo_selected}"
+    )
+    
+    # Asunto
+    asunto = st.text_input(
+        "Asunto",
+        placeholder="Título breve del problema o solicitud",
+        key=f"asunto_{tipo_selected}"
+    )
+    
+    # Descripción con plantilla dinámica
+    descripcion = st.text_area(
+        "Descripción Detallada",
+        value=plantilla_descripcion,
+        height=200,
+        key=f"descripcion_{tipo_selected}"
+    )
+    
+    st.markdown("---")
+    
+    # ============================================
+    # BOTÓN ENVIAR FUERA DE FORM (Para permitir dinámica)
+    # ============================================
+    
+    if st.button(
+        f"✅ Enviar {tipo_selected}",
+        use_container_width=True,
+        type="primary",
+        key=f"btn_enviar_{tipo_selected}"
+    ):
+        # Validación de campos obligatorios
+        if not asunto.strip() or not descripcion.strip():
+            st.error("❌ Asunto y Descripción son campos obligatorios.")
+        # Validar que categoria_final y subcategoria_final no estén vacías si eligió "Otro"
+        elif categoria_seleccionada == "Otro" and not categoria_final.strip():
+            st.error("❌ Debe especificar la categoría.")
+        elif subcategoria_seleccionada == "Otro" and not subcategoria_final.strip():
+            st.error("❌ Debe especificar la subcategoría.")
+        else:
+            prioridad = PRIORITY_MAP[prioridad_es]
+            urgencia = URGENCY_MAP[urgencia_es]
+            
+            ticket_data = {
+                "type": tipo_selected,
+                "account": empresa,
+                "site": ubicacion,
+                "category": categoria_final,  # Variable final con "Otro" resuelto
+                "subcategory": subcategoria_final,  # Variable final con "Otro" resuelto
+                "item": elemento,
+                "level": nivel,
+                "priority": prioridad,
+                "urgency": urgencia,
+                "subject": asunto,
+                "description": descripcion,
+                "created_at": datetime.now()
+            }
+            
+            try:
+                # Guardar en Firestore
+                doc_ref = db.collection('tickets').add(ticket_data)
+                ticket_id = doc_ref[1].id
+                
+                # Enviar correo técnico
+                email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                
+                # Mensajes de éxito
+                st.success(f"✅ {tipo_selected} creado exitosamente")
+                st.info(f"📋 ID del ticket: **{ticket_id}**")
+                
+                if email_enviado:
+                    st.success("📧 Notificación enviada al equipo técnico")
+                
+                st.balloons()
+                
+                # Resetear vista
+                import time
+                time.sleep(2)
+                st.session_state.vista_actual = None
+                st.rerun()
+                
+            except Exception as e:
+                st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
