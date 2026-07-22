@@ -102,31 +102,36 @@ PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 
 # Diccionario de Categorías y Subcategorías dinámicas (Nivel 1 - Helpdesk)
-CATEGORIAS_SUBCATEGORIAS = {
+categorias_dict = {
     "Impresoras / Multifuncionales": [
         "Atasco de papel",
         "Sin conexión / No imprime",
         "Cambio de tóner",
-        "Manchas en la impresión"
+        "Manchas en la impresión",
+        "Otro"
     ],
-    "Cámaras de Seguridad (CCTV)": [
-        "Cámara sin video / Pantalla negra",
-        "Cámara fuera de línea",
-        "Revisión de grabación"
+    "Cámaras web / Videollamadas": [
+        "No da imagen",
+        "Micrófono no funciona",
+        "Aplicación (Teams/Zoom) no la reconoce",
+        "Otro"
     ],
     "Estaciones de Trabajo (PCs)": [
         "Lentitud en el sistema",
         "No enciende",
-        "Problema con periférico (Mouse/Teclado)"
+        "Pantalla azul",
+        "Otro"
     ],
     "Redes y Conectividad": [
         "Sin acceso a Internet",
         "Corte de señal WiFi",
-        "Punto de red dañado"
-    ]
+        "Punto de red físico dañado",
+        "Otro"
+    ],
+    "Otro": ["Otro"]
 }
 
-CATEGORIAS = list(CATEGORIAS_SUBCATEGORIAS.keys())
+CATEGORIAS = list(categorias_dict.keys())
 
 # Plantillas de Descripción (Nivel 1)
 PLANTILLA_INCIDENTE = """Equipo afectado (PC / Impresora / Cámara):
@@ -248,11 +253,21 @@ else:
                 key=f"ubicacion_{tipo_selected}"
             )
             # Categoria con subcategorías dinámicas
-            categoria = st.selectbox(
+            categoria_seleccionada = st.selectbox(
                 "Categoría",
                 CATEGORIAS,
                 key=f"categoria_{tipo_selected}"
             )
+            
+            # Si elige "Otro" en categoría, mostrar campo de texto libre
+            if categoria_seleccionada == "Otro":
+                categoria_final = st.text_input(
+                    "Especifique la Categoría",
+                    placeholder="Ingrese la categoría",
+                    key=f"categoria_otro_{tipo_selected}"
+                )
+            else:
+                categoria_final = categoria_seleccionada
         
         with col2:
             nivel = st.selectbox(
@@ -272,17 +287,27 @@ else:
             )
         
         # Subcategoría dinámica según categoría seleccionada
-        subcategorias_disponibles = CATEGORIAS_SUBCATEGORIAS.get(categoria, [])
-        subcategoria = st.selectbox(
+        subcategorias_disponibles = categorias_dict.get(categoria_seleccionada, ["Otro"])
+        subcategoria_seleccionada = st.selectbox(
             "Subcategoría",
             subcategorias_disponibles,
             key=f"subcategoria_{tipo_selected}"
         )
         
+        # Si elige "Otro" en subcategoría, mostrar campo de texto libre
+        if subcategoria_seleccionada == "Otro":
+            subcategoria_final = st.text_input(
+                "Especifique la Subcategoría",
+                placeholder="Ingrese la subcategoría",
+                key=f"subcategoria_otro_{tipo_selected}"
+            )
+        else:
+            subcategoria_final = subcategoria_seleccionada
+        
         # Elemento Afectado
         elemento = st.text_input(
             "Elemento Afectado",
-            placeholder="Ej: Impresora Xerox, Cámara PTZ, PC-001",
+            placeholder="Ej: Impresora Xerox, Cámara web Logitech, PC-001",
             key=f"elemento_{tipo_selected}"
         )
         
@@ -315,46 +340,52 @@ else:
             if not asunto.strip() or not descripcion.strip():
                 st.error("❌ Asunto y Descripción son campos obligatorios.")
             else:
-                prioridad = PRIORITY_MAP[prioridad_es]
-                urgencia = URGENCY_MAP[urgencia_es]
-                
-                ticket_data = {
-                    "type": tipo_selected,
-                    "account": empresa,
-                    "site": ubicacion,
-                    "category": categoria,
-                    "subcategory": subcategoria,
-                    "item": elemento,
-                    "level": nivel,
-                    "priority": prioridad,
-                    "urgency": urgencia,
-                    "subject": asunto,
-                    "description": descripcion,
-                    "created_at": datetime.now()
-                }
-                
-                try:
-                    # Guardar en Firestore
-                    doc_ref = db.collection('tickets').add(ticket_data)
-                    ticket_id = doc_ref[1].id
+                # Validar que categoria_final y subcategoria_final no estén vacías si eligió "Otro"
+                if categoria_seleccionada == "Otro" and not categoria_final.strip():
+                    st.error("❌ Debe especificar la categoría.")
+                elif subcategoria_seleccionada == "Otro" and not subcategoria_final.strip():
+                    st.error("❌ Debe especificar la subcategoría.")
+                else:
+                    prioridad = PRIORITY_MAP[prioridad_es]
+                    urgencia = URGENCY_MAP[urgencia_es]
                     
-                    # Enviar correo técnico
-                    email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                    ticket_data = {
+                        "type": tipo_selected,
+                        "account": empresa,
+                        "site": ubicacion,
+                        "category": categoria_final,  # Variable final con "Otro" resuelto
+                        "subcategory": subcategoria_final,  # Variable final con "Otro" resuelto
+                        "item": elemento,
+                        "level": nivel,
+                        "priority": prioridad,
+                        "urgency": urgencia,
+                        "subject": asunto,
+                        "description": descripcion,
+                        "created_at": datetime.now()
+                    }
                     
-                    # Mensajes de éxito
-                    st.success(f"✅ {tipo_selected} creado exitosamente")
-                    st.info(f"📋 ID del ticket: **{ticket_id}**")
-                    
-                    if email_enviado:
-                        st.success("📧 Notificación enviada al equipo técnico")
-                    
-                    st.balloons()
-                    
-                    # Resetear vista
-                    import time
-                    time.sleep(2)
-                    st.session_state.vista_actual = None
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
+                    try:
+                        # Guardar en Firestore
+                        doc_ref = db.collection('tickets').add(ticket_data)
+                        ticket_id = doc_ref[1].id
+                        
+                        # Enviar correo técnico
+                        email_enviado = enviar_correo_tecnico(ticket_data, ticket_id)
+                        
+                        # Mensajes de éxito
+                        st.success(f"✅ {tipo_selected} creado exitosamente")
+                        st.info(f"📋 ID del ticket: **{ticket_id}**")
+                        
+                        if email_enviado:
+                            st.success("📧 Notificación enviada al equipo técnico")
+                        
+                        st.balloons()
+                        
+                        # Resetear vista
+                        import time
+                        time.sleep(2)
+                        st.session_state.vista_actual = None
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error al crear el {tipo_selected.lower()}: {str(e)}")
