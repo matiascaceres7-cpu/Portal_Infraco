@@ -12,6 +12,20 @@ from datetime import datetime
 st.set_page_config(page_title="Portal de Servicios On NetFibra", page_icon="🔧", layout="wide")
 
 # ============================================
+# CSS PERSONALIZADO (ALINEACIÓN DE IMÁGENES)
+# ============================================
+css_alineacion = """
+<style>
+    div[data-testid="stImage"] img {
+        height: 220px !important;
+        object-fit: cover !important;
+        border-radius: 12px;
+    }
+</style>
+"""
+st.markdown(css_alineacion, unsafe_allow_html=True)
+
+# ============================================
 # CONEXIÓN A FIRESTORE
 # ============================================
 @st.cache_resource
@@ -100,6 +114,9 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
 # ============================================
 PRIORITY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
 URGENCY_MAP = {"Baja": "Low", "Media": "Medium", "Alta": "High"}
+
+# Nivel fijo (Tier 1)
+NIVEL_FIJO = "Tier 1"
 
 # Diccionario de Categorías y Subcategorías dinámicas (Nivel 1 - Helpdesk)
 categorias_dict = {
@@ -278,11 +295,6 @@ else:
             categoria_final = categoria_seleccionada
     
     with col2:
-        nivel = st.selectbox(
-            "Nivel",
-            ["Tier 1", "Tier 2"],
-            key=f"nivel_{tipo_selected}"
-        )
         prioridad_es = st.selectbox(
             "Prioridad",
             ["Baja", "Media", "Alta"],
@@ -293,6 +305,9 @@ else:
             ["Baja", "Media", "Alta"],
             key=f"urgencia_{tipo_selected}"
         )
+        
+        # Nivel fijo (Tier 1) - No visible para el usuario
+        nivel = NIVEL_FIJO
     
     # Subcategoría dinámica según categoría seleccionada (FUERA DE FORM)
     subcategorias_disponibles = categorias_dict.get(categoria_seleccionada, ["Otro"])
@@ -365,7 +380,7 @@ else:
                 "category": categoria_final,  # Variable final con "Otro" resuelto
                 "subcategory": subcategoria_final,  # Variable final con "Otro" resuelto
                 "item": elemento,
-                "level": nivel,
+                "level": nivel,  # Tier 1 fijo
                 "priority": prioridad,
                 "urgency": urgencia,
                 "subject": asunto,
