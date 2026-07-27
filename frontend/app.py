@@ -51,7 +51,7 @@ db = get_firestore_client()
 def enviar_correo_tecnico(ticket_data, ticket_id):
     """
     Envía un correo electrónico transaccional al equipo técnico con los detalles del ticket.
-    Formato ServiceDesk con etiquetas @@ para parseo automático.
+    Formato ServiceDesk con etiquetas ## para parseo automático.
     
     Args:
         ticket_data (dict): Diccionario con los datos del ticket
@@ -65,28 +65,24 @@ def enviar_correo_tecnico(ticket_data, ticket_id):
         smtp_server = email_config.get("smtp_server", "smtp.gmail.com")
         smtp_port = email_config.get("smtp_port", 465)
         
-        # Construir asunto con formato ServiceDesk (contiene "Solicitud")
-        tipo_ticket = ticket_data['type']
-        asunto = f"Solicitud - {tipo_ticket} - {ticket_data['subject']}"
-        
-        # Construir cuerpo en texto plano con formato ServiceDesk (@@CAMPO=VALOR@@)
-        cuerpo_texto = f"""@@ACCOUNT={ticket_data['account']}@@
-@@SITE={ticket_data['site']}@@
-@@OPERATION=AddRequest@@
-@@CATEGORY={ticket_data['category']}@@
-@@SUBCATEGORY={ticket_data['subcategory']}@@
-@@ITEM={ticket_data['item']}@@
-@@LEVEL={ticket_data['level']}@@
-@@MODE=Web Form@@
-@@PRIORITY={ticket_data['priority']}@@
-@@URGENCY={ticket_data['urgency']}@@
+        # Construir cuerpo en texto plano con formato ServiceDesk (##CAMPO=VALOR##)
+        cuerpo_texto = f"""##ACCOUNT={ticket_data['account']}##
+##SITE={ticket_data['site']}##
+##OPERATION=AddRequest##
+##CATEGORY={ticket_data['category']}##
+##SUBCATEGORY={ticket_data['subcategory']}##
+##ITEM={ticket_data['item']}##
+##LEVEL={ticket_data['level']}##
+##MODE=Web Form##
+##PRIORITY={ticket_data['priority']}##
+##URGENCY={ticket_data['urgency']}##
 
 
 {ticket_data['description']}
 """
         
         mensaje = MIMEText(cuerpo_texto, 'plain', 'utf-8')
-        mensaje['Subject'] = asunto
+        mensaje['Subject'] = "Solicitud"
         mensaje['From'] = sender_email
         mensaje['To'] = recipient_email
         
