@@ -181,8 +181,7 @@ banner_html = """
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 ">
     <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: bold;">
-        Bienvenido al Portal de Servicios OnNet Fibra
-        <img src="frontend/onnetfibra.png" alt="Logo OnNet Fibra" style="height: 60px; margin-top: 10px;">
+        Bienvenido al Portal de Servicios <img src="onnetfibra.png" alt="Logo OnNet Fibra" style="height: 60px; margin-top: 10px;">
     </h1>
     
 </div>
