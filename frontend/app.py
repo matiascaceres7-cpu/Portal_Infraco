@@ -174,7 +174,7 @@ if 'vista_actual' not in st.session_state:
 banner_html = """
 <div style="
     background-color: #c41e3a;
-    padding: 20px 20px;
+    padding: 2px 20px;
     border-radius: 5px;
     margin-bottom: 20px;
     text-align: center;
