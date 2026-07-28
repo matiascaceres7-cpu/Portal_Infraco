@@ -183,7 +183,7 @@ banner_html = """
     <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: bold;">
         Bienvenido al Portal de Servicios OnNet Fibra
     </h1>
-    <img src="frontend/onnetfibra.png" alt="Logo OnNet Fibra" style="height: 60px; margin-top: 10px;">
+    <img src="frontend/onnetfibra.png" >
 </div>
 """
 st.markdown(banner_html, unsafe_allow_html=True)
