@@ -174,14 +174,14 @@ if 'vista_actual' not in st.session_state:
 banner_html = """
 <div style="
     background-color: #c41e3a;
-    padding: 20px 200px;
+    padding: 20px 20px;
     border-radius: 5px;
     margin-bottom: 20px;
     text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 ">
     <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: bold;">
-        ¡Bienvenido al Portal de Servicios OnNet Fibra!
+        Bienvenido al Portal de Servicios OnNet Fibra
     </h1>
 </div>
 """
