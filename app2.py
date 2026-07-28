@@ -12,18 +12,164 @@ from datetime import datetime
 st.set_page_config(page_title="Portal de Servicios On NetFibra", page_icon="🔧", layout="wide")
 
 # ============================================
-# CSS PERSONALIZADO (ALINEACIÓN DE IMÁGENES)
+# CSS PERSONALIZADO (ESTÉTICA ESTILO SERVICEDESK)
 # ============================================
-css_alineacion = """
+# Nota: algunas reglas apuntan a atributos internos de Streamlit
+# (data-testid="stHorizontalBlock", "stVerticalBlockBorderWrapper", "baseButton-*").
+# Son estables en versiones recientes, pero si tu versión de Streamlit difiere
+# y algún estilo no se aplica, inspecciona el elemento en el navegador y
+# ajusta el selector correspondiente.
+css_estilo = """
 <style>
-    div[data-testid="stImage"] img {
-        height: 220px !important;
-        object-fit: cover !important;
-        border-radius: 12px;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap');
+
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+:root{
+    --brand-navy:#111c2e;
+    --brand-blue:#155eef;
+    --brand-red:#c41e3a;
+    --brand-green:#128a4f;
+    --panel-bg:#eef4ff;
+    --panel-border:#cfe0fb;
+}
+
+/* ---------- Barra superior tipo ServiceDesk ---------- */
+.topbar{
+    background:var(--brand-navy);
+    padding:14px 26px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:22px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.18);
+}
+.topbar-brand{
+    color:#ffffff;
+    font-family:'Poppins', sans-serif;
+    font-weight:700;
+    font-size:1.2rem;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.topbar-crumb{
+    color:#9fb3d1;
+    font-size:0.85rem;
+    font-weight:500;
+}
+
+/* ---------- Banner principal ---------- */
+.hero-banner{
+    background:linear-gradient(120deg, var(--brand-red) 0%, #8f1729 100%);
+    padding:32px 24px;
+    border-radius:14px;
+    text-align:center;
+    margin-bottom:26px;
+    box-shadow:0 8px 22px rgba(196,30,58,0.25);
+}
+.hero-banner h1{
+    color:white;
+    margin:0;
+    font-family:'Poppins', sans-serif;
+    font-size:2em;
+    font-weight:700;
+}
+.hero-banner p{
+    color:#ffd9de;
+    margin:8px 0 0 0;
+    font-size:1rem;
+}
+
+/* ---------- Tarjetas de tipo de solicitud ---------- */
+.service-card{
+    border-radius:16px;
+    padding:26px 18px;
+    text-align:center;
+    color:white;
+    min-height:180px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:12px;
+    transition:transform .15s ease;
+}
+.service-card-icon{ font-size:2.3rem; line-height:1; }
+.service-card-title{
+    font-family:'Poppins', sans-serif;
+    font-weight:700;
+    font-size:1.1rem;
+    letter-spacing:.3px;
+}
+.service-card-desc{
+    font-size:.85rem;
+    opacity:.92;
+    max-width:230px;
+}
+
+/* ---------- Paneles de sección del formulario ---------- */
+div[data-testid="stVerticalBlockBorderWrapper"]{
+    background:var(--panel-bg) !important;
+    border:1px solid var(--panel-border) !important;
+    border-radius:14px !important;
+}
+
+.section-title{
+    font-family:'Poppins', sans-serif;
+    font-weight:600;
+    font-size:1.05rem;
+    color:var(--brand-navy);
+    border-bottom:2px solid var(--brand-blue);
+    padding-bottom:8px;
+    margin-bottom:14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+/* ---------- Botones ---------- */
+div.stButton > button{
+    border-radius:8px !important;
+    font-weight:600 !important;
+    padding:0.55rem 1.1rem !important;
+    border:none !important;
+    transition:filter .15s ease;
+}
+div.stButton > button:hover{ filter:brightness(0.93); }
+
+div.stButton > button[kind="primary"],
+button[data-testid="baseButton-primary"]{
+    background:var(--brand-blue) !important;
+    color:white !important;
+}
+div.stButton > button[kind="secondary"],
+button[data-testid="baseButton-secondary"]{
+    background:#eef1f5 !important;
+    color:var(--brand-navy) !important;
+    border:1px solid #d7dde5 !important;
+}
+
+/* Colorea los botones de las tarjetas de inicio según su columna */
+div[data-testid="stHorizontalBlock"] > div:nth-of-type(2) div.stButton > button{
+    background:var(--brand-red) !important;
+    color:white !important;
+}
+div[data-testid="stHorizontalBlock"] > div:nth-of-type(3) div.stButton > button{
+    background:var(--brand-green) !important;
+    color:white !important;
+}
+
+div[data-testid="stImage"] img{
+    height:220px !important;
+    object-fit:cover !important;
+    border-radius:12px;
+}
 </style>
 """
-st.markdown(css_alineacion, unsafe_allow_html=True)
+st.markdown(css_estilo, unsafe_allow_html=True)
 
 # ============================================
 # CONEXIÓN A FIRESTORE
@@ -169,27 +315,44 @@ if 'vista_actual' not in st.session_state:
     st.session_state.vista_actual = None
 
 # ============================================
-# BANNER PRINCIPAL (ROJO)
+# BARRA SUPERIOR
+# ============================================
+crumb = st.session_state.vista_actual if st.session_state.vista_actual else "Inicio"
+st.markdown(f"""
+<div class="topbar">
+    <div class="topbar-brand">🔧 On NetFibra · Portal de Servicios</div>
+    <div class="topbar-crumb">Inicio / {crumb}</div>
+</div>
+""", unsafe_allow_html=True)
+
+# ============================================
+# BANNER PRINCIPAL
 # ============================================
 banner_html = """
-<div style="
-    background-color: #c41e3a;
-    padding: 3px 20px;
-    border-radius: 5px;
-    margin-bottom: 20px;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-">
-    <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: bold;">
-        ¡Bienvenido al Portal de Servicios OnNet Fibra!
-    </h1>
+<div class="hero-banner">
+    <h1>¡Bienvenido al Portal de Servicios On NetFibra!</h1>
+    <p>Reporta incidentes o solicita nuevos requerimientos en un solo lugar.</p>
 </div>
 """
 st.markdown(banner_html, unsafe_allow_html=True)
 
 # ============================================
-# LAYOUT CENTRADO: TARJETAS CON IMÁGENES Y BOTONES
+# LAYOUT CENTRADO: TARJETAS CON ÍCONOS Y BOTONES
 # ============================================
+
+def render_service_card(icon, titulo, descripcion, color):
+    """Renderiza una tarjeta de tipo de solicitud (reemplaza las imágenes estáticas)."""
+    degradados = {
+        "rojo": "linear-gradient(135deg, #e6485f 0%, #c41e3a 100%)",
+        "verde": "linear-gradient(135deg, #1dbf73 0%, #128a4f 100%)",
+    }
+    st.markdown(f"""
+    <div class="service-card" style="background:{degradados[color]};">
+        <div class="service-card-icon">{icon}</div>
+        <div class="service-card-title">{titulo}</div>
+        <div class="service-card-desc">{descripcion}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Si no hay vista seleccionada, mostrar tarjetas
 if st.session_state.vista_actual is None:
@@ -201,13 +364,12 @@ if st.session_state.vista_actual is None:
     # TARJETA INCIDENTE (centrada)
     # ============================================
     with col_incidente:
-        # Intentar cargar imagen de incidente
-        try:
-            st.image("frontend/banner_incidente.png", use_container_width=True)
-        except FileNotFoundError:
-            st.info("ℹ️ Imagen de incidente no disponible")
-        
-        # Botón debajo de la imagen
+        render_service_card(
+            "⚠️",
+            "Reportar un Incidente",
+            "Algo dejó de funcionar: equipos, impresoras, red o software.",
+            "rojo"
+        )
         if st.button(
             "📄 INCIDENTE",
             use_container_width=True,
@@ -220,13 +382,12 @@ if st.session_state.vista_actual is None:
     # TARJETA REQUERIMIENTO (centrada)
     # ============================================
     with col_req:
-        # Intentar cargar imagen de requerimiento
-        try:
-            st.image("frontend/banner_requerimiento.png", use_container_width=True)
-        except FileNotFoundError:
-            st.info("ℹ️ Imagen de requerimiento no disponible")
-        
-        # Botón debajo de la imagen
+        render_service_card(
+            "📝",
+            "Solicitar un Requerimiento",
+            "Necesitas algo nuevo: instalaciones, accesos o cambios.",
+            "verde"
+        )
         if st.button(
             "📝 REQUERIMIENTO",
             use_container_width=True,
@@ -246,8 +407,7 @@ else:
         st.session_state.vista_actual = None
         st.rerun()
     
-    st.markdown(f"### {tipo_selected}")
-    st.markdown("---")
+    st.markdown(f"### {'⚠️' if tipo_selected == 'Incidente' else '📝'} {tipo_selected}")
     
     # Determinar plantilla según tipo
     if tipo_selected == "Incidente":
@@ -256,96 +416,105 @@ else:
         plantilla_descripcion = PLANTILLA_REQUERIMIENTO
     
     # ============================================
+    # PANEL DE DATOS DE LA SOLICITUD
     # CAMPOS FUERA DE st.form PARA DINÁMICA EN TIEMPO REAL
     # ============================================
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        empresa = st.text_input(
-            "Empresa",
-            value="On NetFibra",
-            disabled=True,
-            key=f"empresa_{tipo_selected}"
+    panel_datos = st.container(border=True)
+    with panel_datos:
+        st.markdown('<div class="section-title">🗂️ Datos de la Solicitud</div>', unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            empresa = st.text_input(
+                "Empresa",
+                value="On NetFibra",
+                disabled=True,
+                key=f"empresa_{tipo_selected}"
+            )
+            ubicacion = st.selectbox(
+                "Ubicación",
+                ["Piso 14", "Piso 15", "Remoto"],
+                key=f"ubicacion_{tipo_selected}"
+            )
+            # Categoria con subcategorías dinámicas (FUERA DE FORM)
+            categoria_seleccionada = st.selectbox(
+                "Categoría",
+                CATEGORIAS,
+                key=f"categoria_{tipo_selected}"
+            )
+
+            # Si elige "Otro" en categoría, mostrar campo de texto libre
+            if categoria_seleccionada == "Otro":
+                categoria_final = st.text_input(
+                    "Especifique la Categoría",
+                    placeholder="Ingrese la categoría",
+                    key=f"categoria_otro_{tipo_selected}"
+                )
+            else:
+                categoria_final = categoria_seleccionada
+
+        with col2:
+            prioridad_es = st.selectbox(
+                "Prioridad",
+                ["Baja", "Media", "Alta"],
+                key=f"prioridad_{tipo_selected}"
+            )
+            urgencia_es = st.selectbox(
+                "Urgencia",
+                ["Baja", "Media", "Alta"],
+                key=f"urgencia_{tipo_selected}"
+            )
+
+            # Nivel fijo (Tier 1) - No visible para el usuario
+            nivel = NIVEL_FIJO
+
+        # Subcategoría dinámica según categoría seleccionada (FUERA DE FORM)
+        subcategorias_disponibles = categorias_dict.get(categoria_seleccionada, ["Otro"])
+        subcategoria_seleccionada = st.selectbox(
+            "Subcategoría",
+            subcategorias_disponibles,
+            key=f"subcategoria_{tipo_selected}"
         )
-        ubicacion = st.selectbox(
-            "Ubicación",
-            ["Piso 14", "Piso 15", "Remoto"],
-            key=f"ubicacion_{tipo_selected}"
-        )
-        # Categoria con subcategorías dinámicas (FUERA DE FORM)
-        categoria_seleccionada = st.selectbox(
-            "Categoría",
-            CATEGORIAS,
-            key=f"categoria_{tipo_selected}"
-        )
-        
-        # Si elige "Otro" en categoría, mostrar campo de texto libre
-        if categoria_seleccionada == "Otro":
-            categoria_final = st.text_input(
-                "Especifique la Categoría",
-                placeholder="Ingrese la categoría",
-                key=f"categoria_otro_{tipo_selected}"
+
+        # Si elige "Otro" en subcategoría, mostrar campo de texto libre
+        if subcategoria_seleccionada == "Otro":
+            subcategoria_final = st.text_input(
+                "Especifique la Subcategoría",
+                placeholder="Ingrese la subcategoría",
+                key=f"subcategoria_otro_{tipo_selected}"
             )
         else:
-            categoria_final = categoria_seleccionada
-    
-    with col2:
-        prioridad_es = st.selectbox(
-            "Prioridad",
-            ["Baja", "Media", "Alta"],
-            key=f"prioridad_{tipo_selected}"
+            subcategoria_final = subcategoria_seleccionada
+
+        # Elemento Afectado
+        elemento = st.text_input(
+            "Elemento Afectado",
+            placeholder="Ej: Mi notebook, la impresora del pasillo, el router",
+            key=f"elemento_{tipo_selected}"
         )
-        urgencia_es = st.selectbox(
-            "Urgencia",
-            ["Baja", "Media", "Alta"],
-            key=f"urgencia_{tipo_selected}"
+
+    # ============================================
+    # PANEL DE DESCRIPCIÓN
+    # ============================================
+    panel_descripcion = st.container(border=True)
+    with panel_descripcion:
+        st.markdown('<div class="section-title">🖊️ Descripción de la Solicitud</div>', unsafe_allow_html=True)
+
+        # Asunto
+        asunto = st.text_input(
+            "Asunto",
+            placeholder="Título breve del problema o solicitud",
+            key=f"asunto_{tipo_selected}"
         )
-        
-        # Nivel fijo (Tier 1) - No visible para el usuario
-        nivel = NIVEL_FIJO
-    
-    # Subcategoría dinámica según categoría seleccionada (FUERA DE FORM)
-    subcategorias_disponibles = categorias_dict.get(categoria_seleccionada, ["Otro"])
-    subcategoria_seleccionada = st.selectbox(
-        "Subcategoría",
-        subcategorias_disponibles,
-        key=f"subcategoria_{tipo_selected}"
-    )
-    
-    # Si elige "Otro" en subcategoría, mostrar campo de texto libre
-    if subcategoria_seleccionada == "Otro":
-        subcategoria_final = st.text_input(
-            "Especifique la Subcategoría",
-            placeholder="Ingrese la subcategoría",
-            key=f"subcategoria_otro_{tipo_selected}"
+
+        # Descripción con plantilla dinámica
+        descripcion = st.text_area(
+            "Descripción Detallada",
+            value=plantilla_descripcion,
+            height=200,
+            key=f"descripcion_{tipo_selected}"
         )
-    else:
-        subcategoria_final = subcategoria_seleccionada
-    
-    # Elemento Afectado
-    elemento = st.text_input(
-        "Elemento Afectado",
-        placeholder="Ej: Mi notebook, la impresora del pasillo, el router",
-        key=f"elemento_{tipo_selected}"
-    )
-    
-    # Asunto
-    asunto = st.text_input(
-        "Asunto",
-        placeholder="Título breve del problema o solicitud",
-        key=f"asunto_{tipo_selected}"
-    )
-    
-    # Descripción con plantilla dinámica
-    descripcion = st.text_area(
-        "Descripción Detallada",
-        value=plantilla_descripcion,
-        height=200,
-        key=f"descripcion_{tipo_selected}"
-    )
-    
-    st.markdown("---")
     
     # ============================================
     # BOTÓN ENVIAR FUERA DE FORM (Para permitir dinámica)
