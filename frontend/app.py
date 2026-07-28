@@ -173,7 +173,7 @@ if 'vista_actual' not in st.session_state:
 # ============================================
 banner_html = """
 <div style="
-    background-color: #c41e3a;
+    background-color: #0063c6;
     padding: 2px 20px;
     border-radius: 5px;
     margin-bottom: 20px;
@@ -183,6 +183,7 @@ banner_html = """
     <h1 style="color: white; margin: 0; font-size: 2.2em; font-weight: bold;">
         Bienvenido al Portal de Servicios OnNet Fibra
     </h1>
+    <img src="frontend/logo_onnet.png" alt="Logo OnNet Fibra" style="height: 60px; margin-top: 10px;">
 </div>
 """
 st.markdown(banner_html, unsafe_allow_html=True)
